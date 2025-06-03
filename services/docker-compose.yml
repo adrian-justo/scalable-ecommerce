@@ -1,0 +1,19 @@
+#include:
+#  - ecomm-account-management/docker-compose.yml
+
+services:
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: user@email.com
+      PGADMIN_DEFAULT_PASSWORD: pass
+    ports:
+      - 5431:80
+    networks:
+      - ecomm-net
+    restart: unless-stopped
+
+networks:
+  ecomm-net:
+    driver: bridge

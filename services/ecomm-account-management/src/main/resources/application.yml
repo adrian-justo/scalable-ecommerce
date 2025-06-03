@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ecomm-account-management
+  profiles:
+      active: dev
+  config:
+    import: "optional:configserver:"
+    
+server:
+  port: 8081

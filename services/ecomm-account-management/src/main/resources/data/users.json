@@ -1,0 +1,31 @@
+[
+  {
+    "username": "admin123",
+    "email": "admin123@ecomm.com",
+    "mobileNo": "+639011234567",
+    "password": "p@sSs123",
+    "name": "E-comm Admin",
+    "roles": [
+      "ADMIN"
+    ],
+    "active": true
+  },
+  {
+    "username": "client123",
+    "email": "client123@mail.com",
+    "mobileNo": "+639021234567",
+    "password": "Cli3nt!@",
+    "name": "E-comm Client",
+    "shopName": "Shop Name",
+    "address": "Address, City, State, Zip",
+    "roles": [
+      "BUYER",
+      "SELLER"
+    ],
+    "notificationTypes": [
+      "EMAIL",
+      "SMS"
+    ],
+    "active": true
+  }
+]
