@@ -1,21 +1,13 @@
-name: Build and Test Microservices
+name: Build and Test Account Management Microservice
 
 on:
-  pull_request:
-    branches:
-      - main
+  push:
+    paths:
+      - 'services/ecomm-account-management/**'
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        ms:
-          [
-            ecomm-account-management
-          ]
-    
+    runs-on: ubuntu-latest    
     steps:
     - name: Checkout code
     - uses: actions/checkout@v4
@@ -29,4 +21,4 @@ jobs:
         
     - name: All the Tests and Coverage check
       run: mvn clean install
-      working-directory: ${{ matrix.ms }}
+      working-directory: services/ecomm-account-management
