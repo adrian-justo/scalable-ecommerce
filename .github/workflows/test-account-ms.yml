@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - 'services/ecomm-account-management/**'
+    branches-ignore:
+      - main
 
 jobs:
   build-and-test:
