@@ -43,7 +43,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
-	private final String URI = "/api/v1/users";
+	private final String uri = "/api/v1/users";
 
 	private List<UserResponse> response;
 
@@ -69,7 +69,7 @@ class UserControllerTest {
 	@Test
 	void accountDetails_getAll() throws Exception {
 		when(service.findAll(anyInt(), anyInt())).thenReturn(response);
-		ResultActions action = mvc.perform(get(URI));
+		ResultActions action = mvc.perform(get(uri));
 
 		String jsonResponse = mapper.writeValueAsString(response);
 		action.andExpect(status().isOk()).andExpect(content().json(jsonResponse));
@@ -81,7 +81,7 @@ class UserControllerTest {
 		UserResponse userResponse = response.get(0);
 
 		when(service.findByUsername(anyString())).thenReturn(Optional.of(userResponse));
-		ResultActions action = mvc.perform(get(URI + "/admin123"));
+		ResultActions action = mvc.perform(get(uri + "/admin123"));
 
 		String jsonResponse = mapper.writeValueAsString(userResponse);
 		action.andExpect(status().isOk()).andExpect(content().json(jsonResponse));
@@ -99,7 +99,7 @@ class UserControllerTest {
 
 		when(service.update(anyString(), any())).thenReturn(Optional.of(userResponse));
 		ResultActions action = mvc.perform(
-				put(URI + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)));
+				put(uri + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)));
 
 		String jsonResponse = mapper.writeValueAsString(userResponse);
 		action.andExpect(status().isOk()).andExpect(content().json(jsonResponse));
@@ -109,14 +109,14 @@ class UserControllerTest {
 	@Test
 	void accountManagement_invalidDetails() throws Exception {
 		UpdateUserRequest request = new UpdateUserRequest("updatedemail.com", "0", null, null, null, null, null, null);
-		mvc.perform(put(URI + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)))
+		mvc.perform(put(uri + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void accountDeletion_success() throws Exception {
 		doNothing().when(service).deleteByUsername(anyString());
-		mvc.perform(delete(URI + "/admin123")).andExpect(status().isNoContent());
+		mvc.perform(delete(uri + "/admin123")).andExpect(status().isNoContent());
 		verify(service, times(1)).deleteByUsername("admin123");
 	}
 

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +21,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
@@ -47,10 +47,10 @@ class UserServiceTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		ObjectMapper objMap = new ObjectMapper();
+		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (InputStream inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
+			response = objMap.readValue(inputStream, new TypeReference<List<UserResponse>>() {
 			});
 		}
 	}
@@ -58,8 +58,8 @@ class UserServiceTest {
 	@Test
 	void findAll() {
 		Page<User> users = new PageImpl<>(response.stream().map(mapper::toEntity).toList());
-		when(repository.findAll(anyInt(), anyInt())).thenReturn(users);
-		assertEquals(response, service.findAll(1, 1));
+		when(repository.findAll(any(PageRequest.class))).thenReturn(users);
+		assertEquals(response, service.findAll(1, 10));
 	}
 
 	@Test
@@ -84,13 +84,13 @@ class UserServiceTest {
 		User updated = existing.get();
 		updated.setEmail(request.email());
 		updated.setMobileNo(request.mobileNo());
-		UserResponse response = mapper.toResponse(updated);
+		UserResponse user = mapper.toResponse(updated);
 
 		when(repository.existsByEmailOrMobileNo(anyString(), anyString())).thenReturn(false);
 		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(existing);
 		when(repository.save(any())).thenReturn(updated);
 
-		assertEquals(response, service.update("admin123", request).get());
+		assertEquals(user, service.update("admin123", request).get());
 	}
 
 	@Test
@@ -120,12 +120,11 @@ class UserServiceTest {
 
 		assertFalse(user.get().isActive());
 	}
-	
+
 	@Test
 	void deleteByUsername_notFound() {
 		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(Optional.empty());
 		assertThrows(UserNotFoundException.class, () -> service.deleteByUsername("nonexistent"));
 	}
-	
 
 }

@@ -39,7 +39,7 @@ class AuthService implements IAuthService {
 		return repository.findByUsernameAndActiveTrue(request.identifier())
 				.or(() -> repository.findByEmailAndActiveTrueOrMobileNoAndActiveTrue(request.identifier(),
 						request.identifier()))
-				.filter(user -> request.password().equals(user.getPassword())).map(user -> generateToken(user));
+				.filter(user -> request.password().equals(user.getPassword())).map(this::generateToken);
 	}
 
 	private String generateToken(User user) {

@@ -46,10 +46,10 @@ class AuthServiceTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+		ObjectMapper objMap = new ObjectMapper();
+		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (InputStream inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
+			response = objMap.readValue(inputStream, new TypeReference<List<UserResponse>>() {
 			});
 		}
 	}
@@ -66,7 +66,6 @@ class AuthServiceTest {
 		user.setPassword(request.password());
 		user.setName(request.name());
 		user.setRoles(request.roles());
-		Optional<UserResponse> response = Optional.of(mapper.toResponse(user));
 
 		when(repository.existsByUsernameAndActiveTrue(anyString())).thenReturn(false);
 		when(repository.existsByEmailAndActiveTrueOrMobileNoAndActiveTrue(anyString(), anyString())).thenReturn(false);
@@ -74,7 +73,7 @@ class AuthServiceTest {
 				.thenReturn(Optional.empty());
 		when(repository.save(any())).thenReturn(user);
 
-		assertEquals(response, service.register(request));
+		assertEquals(Optional.of(mapper.toResponse(user)), service.register(request));
 	}
 
 	@Test

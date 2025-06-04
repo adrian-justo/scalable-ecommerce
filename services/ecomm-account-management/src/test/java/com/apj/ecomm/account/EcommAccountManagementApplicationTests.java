@@ -41,11 +41,11 @@ import io.restassured.RestAssured;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class EcommAccountManagementApplicationTests {
 
-	private final String API_VERSION = "/api/v1/";
+	private final String apiVersion = "/api/v1/";
 
-	private final String USER_SERVICE_PATH = "users/";
+	private final String userServicePath = "users/";
 
-	private final String USERNAME = "seller123";
+	private final String username = "seller123";
 
 	@LocalServerPort
 	private int port;
@@ -77,11 +77,11 @@ class EcommAccountManagementApplicationTests {
 	@Test
 	@Order(2)
 	void userRegistration() throws JacksonException {
-		CreateUserRequest request = new CreateUserRequest(USERNAME, "seller123@mail.com", "+639031234567",
+		CreateUserRequest request = new CreateUserRequest(username, "seller123@mail.com", "+639031234567",
 				"sellerP@ss123", "Seller Name", List.of(Role.SELLER));
 
 		String response = given().contentType("application/json").body(mapper.writeValueAsString(request)).when()
-				.post(API_VERSION + "auth/register").then().assertThat().statusCode(HttpStatus.CREATED).extract().body()
+				.post(apiVersion + "auth/register").then().assertThat().statusCode(HttpStatus.CREATED).extract().body()
 				.asString();
 		UserResponse user = mapper.readValue(response, new TypeReference<UserResponse>() {
 		});
@@ -93,9 +93,9 @@ class EcommAccountManagementApplicationTests {
 	@Test
 	@Order(3)
 	void login() {
-		LoginRequest request = new LoginRequest(USERNAME, "sellerP@ss123");
+		LoginRequest request = new LoginRequest(username, "sellerP@ss123");
 
-		String response = given().contentType("application/json").body(request).when().post(API_VERSION + "auth/login")
+		String response = given().contentType("application/json").body(request).when().post(apiVersion + "auth/login")
 				.then().assertThat().statusCode(HttpStatus.OK).extract().body().asString();
 
 		assertFalse(response.isEmpty());
@@ -105,7 +105,7 @@ class EcommAccountManagementApplicationTests {
 	@Order(4)
 	void accountDetails() throws JacksonException {
 		String response = given().header(HttpHeaders.AUTHORIZATION, "Bearer test").when()
-				.get(API_VERSION + USER_SERVICE_PATH + USERNAME).then().assertThat().statusCode(HttpStatus.OK).extract()
+				.get(apiVersion + userServicePath + username).then().assertThat().statusCode(HttpStatus.OK).extract()
 				.body().asString();
 		UserResponse user = mapper.readValue(response, new TypeReference<UserResponse>() {
 		});
@@ -121,12 +121,12 @@ class EcommAccountManagementApplicationTests {
 				null, null);
 
 		String response = given().header(HttpHeaders.AUTHORIZATION, "Bearer test").contentType("application/json")
-				.body(request).when().put(API_VERSION + USER_SERVICE_PATH + USERNAME).then().assertThat()
+				.body(request).when().put(apiVersion + userServicePath + username).then().assertThat()
 				.statusCode(HttpStatus.OK).extract().body().asString();
 		UserResponse user = mapper.readValue(response, new TypeReference<UserResponse>() {
 		});
 
-		assertEquals(USERNAME, user.username());
+		assertEquals(username, user.username());
 		assertEquals(request.email(), user.email());
 		assertEquals(request.mobileNo(), user.mobileNo());
 		assertNotNull(user.password());
@@ -136,9 +136,9 @@ class EcommAccountManagementApplicationTests {
 	@Order(6)
 	void accountDeletion() {
 		given().header(HttpHeaders.AUTHORIZATION, "Bearer test").when()
-				.delete(API_VERSION + USER_SERVICE_PATH + USERNAME).then().assertThat()
+				.delete(apiVersion + userServicePath + username).then().assertThat()
 				.statusCode(HttpStatus.NO_CONTENT);
-		given().header(HttpHeaders.AUTHORIZATION, "Bearer test").when().get(API_VERSION + USER_SERVICE_PATH + USERNAME)
+		given().header(HttpHeaders.AUTHORIZATION, "Bearer test").when().get(apiVersion + userServicePath + username)
 				.then().assertThat().statusCode(HttpStatus.NOT_FOUND);
 	}
 

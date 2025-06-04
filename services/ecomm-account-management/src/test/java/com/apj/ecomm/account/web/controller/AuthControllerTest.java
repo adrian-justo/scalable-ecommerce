@@ -40,7 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
-	private final String URI = "/api/v1/auth";
+	private final String uri = "/api/v1/auth";
 
 	private List<UserResponse> response;
 
@@ -70,7 +70,7 @@ class AuthControllerTest {
 				request.name(), "", "", request.roles(), List.of(NotificationType.EMAIL), true);
 
 		when(service.register(any())).thenReturn(Optional.of(userResponse));
-		ResultActions action = mvc.perform(post(URI + "/register").contentType(MediaType.APPLICATION_JSON)
+		ResultActions action = mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request)));
 
 		String jsonResponse = mapper.writeValueAsString(userResponse);
@@ -81,7 +81,7 @@ class AuthControllerTest {
 	@Test
 	void userRegistration_invalidDetails() throws Exception {
 		CreateUserRequest request = new CreateUserRequest("", "", "", "", "", null);
-		mvc.perform(post(URI + "/register").contentType(MediaType.APPLICATION_JSON)
+		mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
 	}
 
@@ -92,7 +92,7 @@ class AuthControllerTest {
 		String jwt = "jwt.token.here";
 
 		when(service.login(any())).thenReturn(Optional.of(jwt));
-		mvc.perform(post(URI + "/login").contentType(MediaType.APPLICATION_JSON)
+		mvc.perform(post(uri + "/login").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isOk());
 	}
 
@@ -100,7 +100,7 @@ class AuthControllerTest {
 	void login_incorrectCredentials() throws Exception {
 		LoginRequest request = new LoginRequest("unknownUser", "wrongPassword123");
 		when(service.login(any())).thenThrow(IncorrectCredentialsException.class);
-		mvc.perform(post(URI + "/login").contentType(MediaType.APPLICATION_JSON)
+		mvc.perform(post(uri + "/login").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isUnauthorized());
 	}
 

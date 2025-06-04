@@ -3,6 +3,9 @@ package com.apj.ecomm.account.domain;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +26,8 @@ class UserService implements IUserService {
 
 	@Transactional(readOnly = true)
 	public List<UserResponse> findAll(int pageNo, int size) {
-		return repository.findAll(pageNo, size).stream().map(mapper::toResponse).toList();
+		Pageable pageable = PageRequest.of(pageNo - 1, size, Sort.by("id").ascending());
+		return repository.findAll(pageable).stream().map(mapper::toResponse).toList();
 	}
 
 	@Transactional(readOnly = true)

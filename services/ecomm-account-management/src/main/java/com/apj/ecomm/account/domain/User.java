@@ -34,8 +34,13 @@ class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
-
-	private String username, email, mobileNo, password, name, shopName, address;
+	private String username;
+	private String email;
+	private String mobileNo;
+	private String password;
+	private String name;
+	private String shopName;
+	private String address;
 
 	@Enumerated(value = EnumType.STRING)
 	@ColumnDefault("'{BUYER}'")
