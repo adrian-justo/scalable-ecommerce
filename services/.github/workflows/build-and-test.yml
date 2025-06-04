@@ -1,0 +1,32 @@
+name: Build and Test Microservices
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        ms:
+          [
+            ecomm-account-management
+          ]
+    
+    steps:
+    - name: Checkout code
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: All the Tests and Coverage check
+      run: mvn clean install
+      working-directory: ${{ matrix.ms }}
