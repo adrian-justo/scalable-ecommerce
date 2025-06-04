@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: ecomm-api-gateway
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: Account Management Microservice
+              uri: lb://ECOMM-ACCOUNT-MANAGEMENT
+              predicates:
+                - Path=/api/*/users/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    fallbackUri: forward:/fallback/account-management
+                    
+            - id: Account Management Microservice - Authorization
+              uri: lb://ECOMM-ACCOUNT-MANAGEMENT
+              predicates:
+                - Path=/api/*/auth/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    fallbackUri: forward:/fallback/account-management
+
+server:
+  port: 8080
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8082/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+        
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        register-health-indicator: true
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        permitted-number-of-calls-in-half-open-state: 3
+        wait-duration-in-open-state: 5s
+        automatic-transition-from-open-to-half-open-enabled: true
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
+        cancel-running-future: true
+        
+logging:
+  level:
+    root: info
+    '[org.springframework.cloud.gateway]': trace
+    '[org.springframework.cloud.gateway.route.RouteDefinitionLocator]': info
