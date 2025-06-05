@@ -5,6 +5,7 @@ import java.time.Instant;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -16,22 +17,34 @@ class AccountExceptionHandler {
 	public ProblemDetail handle(UserNotFoundException e) {
 		return getDetail(HttpStatus.NOT_FOUND, e.getMessage(), "User is not found");
 	}
-	
-	@ExceptionHandler(UsernameTakenException.class)
-	public ProblemDetail handle(UsernameTakenException e) {
-		return getDetail(HttpStatus.CONFLICT, e.getMessage(), "Username is already taken");
-	}
-	
+
 	@ExceptionHandler(AlreadyRegisteredException.class)
 	public ProblemDetail handle(AlreadyRegisteredException e) {
-		return getDetail(HttpStatus.CONFLICT, e.getMessage(), "Email address and/or Mobile no. has already been registered");
+		return getDetail(HttpStatus.CONFLICT, e.getMessage(),
+				"Username, email, and/or mobile has already been registered");
 	}
-	
+
 	@ExceptionHandler(IncorrectCredentialsException.class)
 	public ProblemDetail handle(IncorrectCredentialsException e) {
 		return getDetail(HttpStatus.UNAUTHORIZED, e.getMessage(), "Credentials provided is incorrect");
 	}
-	
+
+	@ExceptionHandler(BadCredentialsException.class)
+	public ProblemDetail handle(BadCredentialsException e) {
+		return getDetail(HttpStatus.UNAUTHORIZED, e.getMessage(), "Credentials provided is incorrect");
+	}
+
+	@ExceptionHandler(EmailSmsMissingException.class)
+	public ProblemDetail handle(EmailSmsMissingException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage(),
+				"At least one of email or mobile no. must be provided");
+	}
+
+	@ExceptionHandler(RoleMissingException.class)
+	public ProblemDetail handle(RoleMissingException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage(), "At least one role must be set");
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ProblemDetail handle(MethodArgumentNotValidException e) {
 		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage(), "Details provided is invalid");
