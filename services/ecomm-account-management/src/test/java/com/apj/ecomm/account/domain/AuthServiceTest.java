@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,12 +19,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
-import com.apj.ecomm.account.web.exception.UsernameTakenException;
+import com.apj.ecomm.account.web.exception.IncorrectCredentialsException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +42,12 @@ class AuthServiceTest {
 
 	@Spy
 	private UserMapper mapper = Mappers.getMapper(UserMapper.class);
+
+	@Mock
+	private PasswordEncoder encoder;
+
+	@Mock
+	private AuthenticationManager manager;
 
 	@InjectMocks
 	private AuthService service;
@@ -58,17 +66,8 @@ class AuthServiceTest {
 	void register_success() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
 				"$elL3r12", "Seller Name", List.of(Role.SELLER));
-		User user = new User();
-		user.setId(UUID.randomUUID());
-		user.setUsername(request.username());
-		user.setEmail(request.email());
-		user.setMobileNo(request.mobileNo());
-		user.setPassword(request.password());
-		user.setName(request.name());
-		user.setRoles(request.roles());
+		User user = mapper.toEntity(request);
 
-		when(repository.existsByUsernameAndActiveTrue(anyString())).thenReturn(false);
-		when(repository.existsByEmailAndActiveTrueOrMobileNoAndActiveTrue(anyString(), anyString())).thenReturn(false);
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
 				.thenReturn(Optional.empty());
 		when(repository.save(any())).thenReturn(user);
@@ -77,57 +76,37 @@ class AuthServiceTest {
 	}
 
 	@Test
-	void register_alreadyTaken() {
-		UserResponse existing = response.get(0);
-		CreateUserRequest request = new CreateUserRequest(existing.username(), existing.email(), existing.mobileNo(),
-				existing.password(), existing.name(), existing.roles());
-		when(repository.existsByUsernameAndActiveTrue(anyString())).thenReturn(true);
-		assertThrows(UsernameTakenException.class, () -> service.register(request));
-	}
-
-	@Test
 	void register_alreadyRegistered() {
-		UserResponse existing = response.get(0);
-		CreateUserRequest request = new CreateUserRequest(existing.username(), existing.email(), existing.mobileNo(),
-				existing.password(), existing.name(), existing.roles());
+		UserResponse userResponse = response.get(0);
+		CreateUserRequest request = new CreateUserRequest(userResponse.username(), userResponse.email(),
+				userResponse.mobileNo(), userResponse.password(), userResponse.name(), userResponse.roles());
+		User existing = mapper.toEntity(request);
 
-		when(repository.existsByUsernameAndActiveTrue(anyString())).thenReturn(false);
-		when(repository.existsByEmailAndActiveTrueOrMobileNoAndActiveTrue(anyString(), anyString())).thenReturn(true);
+		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
+				.thenReturn(Optional.of(existing));
 
 		assertThrows(AlreadyRegisteredException.class, () -> service.register(request));
 	}
 
 	@Test
-	void login_username_success() {
-		UserResponse existing = response.get(0);
-		LoginRequest request = new LoginRequest(existing.username(), existing.password());
-		Optional<User> user = Optional.of(mapper.toEntity(existing));
-
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(user);
-
-		assertTrue(!service.login(request).isEmpty());
-	}
-
-	@Test
-	void login_emailOrMobile_success() {
+	void login_success() {
 		UserResponse existing = response.get(0);
 		LoginRequest request = new LoginRequest(existing.email(), existing.password());
 		Optional<User> user = Optional.of(mapper.toEntity(response.get(0)));
 
-		when(repository.findByEmailAndActiveTrueOrMobileNoAndActiveTrue(anyString(), anyString())).thenReturn(user);
+		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString())).thenReturn(user);
+		when(manager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+				.thenReturn(new UsernamePasswordAuthenticationToken(existing.username(), existing.password()));
 
 		assertTrue(!service.login(request).isEmpty());
 	}
 
 	@Test
 	void login_incorrectCredentials() {
-		LoginRequest request = new LoginRequest("nonexistent", "wrongpassword");
-
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(Optional.empty());
-		when(repository.findByEmailAndActiveTrueOrMobileNoAndActiveTrue(anyString(), anyString()))
+		LoginRequest request = new LoginRequest("nonexistent", "wrongPassword");
+		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
 				.thenReturn(Optional.empty());
-
-		assertTrue(service.login(request).isEmpty());
+		assertThrows(IncorrectCredentialsException.class, () -> service.login(request));
 	}
 
 }

@@ -26,6 +26,8 @@ import org.springframework.data.domain.PageRequest;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
+import com.apj.ecomm.account.web.exception.EmailSmsMissingException;
+import com.apj.ecomm.account.web.exception.RoleMissingException;
 import com.apj.ecomm.account.web.exception.UserNotFoundException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -66,39 +68,39 @@ class UserServiceTest {
 	void findByUsername_found() {
 		UserResponse userResponse = response.get(0);
 		Optional<User> user = Optional.of(mapper.toEntity(userResponse));
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(user);
+		when(repository.findByUsername(anyString())).thenReturn(user);
 		assertEquals(userResponse, service.findByUsername("admin123").get());
 	}
 
 	@Test
 	void findByUsername_notFound() {
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(Optional.empty());
+		when(repository.findByUsername(anyString())).thenReturn(Optional.empty());
 		assertThrows(UserNotFoundException.class, () -> service.findByUsername("nonexistent"));
 	}
 
 	@Test
 	void update_success() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				null, null);
-		Optional<User> existing = Optional.of(mapper.toEntity(response.get(0)));
-		User updated = existing.get();
-		updated.setEmail(request.email());
-		updated.setMobileNo(request.mobileNo());
-		UserResponse user = mapper.toResponse(updated);
+		UpdateUserRequest request = new UpdateUserRequest("", "+639031234567", null, null, null, null, null, null);
+		User existing = mapper.toEntity(response.get(1));
+		User updated = mapper.updateEntity(request, existing);
 
 		when(repository.existsByEmailOrMobileNo(anyString(), anyString())).thenReturn(false);
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(existing);
+		when(repository.findByUsername(anyString())).thenReturn(Optional.of(existing));
 		when(repository.save(any())).thenReturn(updated);
+		UserResponse userResponse = service.update("client123", request).get();
 
-		assertEquals(user, service.update("admin123", request).get());
+		assertEquals(mapper.toResponse(updated), userResponse);
+		assertEquals(List.of(NotificationType.SMS), userResponse.notificationTypes());
 	}
 
 	@Test
 	void update_userNotFound() {
 		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
 				null, null);
+
 		when(repository.existsByEmailOrMobileNo(anyString(), anyString())).thenReturn(false);
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(Optional.empty());
+		when(repository.findByUsername(anyString())).thenReturn(Optional.empty());
+
 		assertThrows(UserNotFoundException.class, () -> service.update("nonexistent", request));
 	}
 
@@ -111,10 +113,23 @@ class UserServiceTest {
 	}
 
 	@Test
+	void update_emailSmsMissing() {
+		UpdateUserRequest request = new UpdateUserRequest("", "", null, null, null, null, null, null);
+		assertThrows(EmailSmsMissingException.class, () -> service.update("admin123", request));
+	}
+
+	@Test
+	void update_roleMissing() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+				List.of(), null);
+		assertThrows(RoleMissingException.class, () -> service.update("admin123", request));
+	}
+
+	@Test
 	void deleteByUsername_success() {
 		Optional<User> user = Optional.of(mapper.toEntity(response.get(0)));
 
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(user);
+		when(repository.findByUsername(anyString())).thenReturn(user);
 		when(repository.save(any())).thenReturn(user.get());
 		service.deleteByUsername("admin123");
 
@@ -123,7 +138,7 @@ class UserServiceTest {
 
 	@Test
 	void deleteByUsername_notFound() {
-		when(repository.findByUsernameAndActiveTrue(anyString())).thenReturn(Optional.empty());
+		when(repository.findByUsername(anyString())).thenReturn(Optional.empty());
 		assertThrows(UserNotFoundException.class, () -> service.deleteByUsername("nonexistent"));
 	}
 

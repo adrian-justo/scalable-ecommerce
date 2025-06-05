@@ -1,6 +1,7 @@
 package com.apj.ecomm.account.domain;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -9,6 +10,9 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -29,7 +33,9 @@ import lombok.Setter;
 @Table(name = "users")
 @DynamicInsert
 @DynamicUpdate
-class User {
+class User implements UserDetails {
+
+	private static final long serialVersionUID = 2152803822016817984L;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -58,5 +64,10 @@ class User {
 
 	@Column(columnDefinition = "boolean default true")
 	private boolean active = true;
+
+	@Override
+	public Collection<? extends GrantedAuthority> getAuthorities() {
+		return roles.stream().map(role -> new SimpleGrantedAuthority("ROLE_" + role.name())).toList();
+	}
 
 }

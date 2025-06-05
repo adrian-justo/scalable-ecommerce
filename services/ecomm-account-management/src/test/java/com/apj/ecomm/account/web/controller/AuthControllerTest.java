@@ -29,7 +29,6 @@ import com.apj.ecomm.account.domain.Role;
 import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
-import com.apj.ecomm.account.web.exception.IncorrectCredentialsException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,8 +65,8 @@ class AuthControllerTest {
 	void userRegistration_success() throws Exception {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
 				"$elL3r12", "Seller Name", List.of(Role.SELLER));
-		UserResponse userResponse = new UserResponse(request.username(), request.email(), request.mobileNo(), request.password(),
-				request.name(), "", "", request.roles(), List.of(NotificationType.EMAIL), true);
+		UserResponse userResponse = new UserResponse(request.username(), request.email(), request.mobileNo(),
+				request.password(), request.name(), "", "", request.roles(), List.of(NotificationType.EMAIL), true);
 
 		when(service.register(any())).thenReturn(Optional.of(userResponse));
 		ResultActions action = mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
@@ -94,14 +93,6 @@ class AuthControllerTest {
 		when(service.login(any())).thenReturn(Optional.of(jwt));
 		mvc.perform(post(uri + "/login").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isOk());
-	}
-
-	@Test
-	void login_incorrectCredentials() throws Exception {
-		LoginRequest request = new LoginRequest("unknownUser", "wrongPassword123");
-		when(service.login(any())).thenThrow(IncorrectCredentialsException.class);
-		mvc.perform(post(uri + "/login").contentType(MediaType.APPLICATION_JSON)
-				.content(mapper.writeValueAsString(request))).andExpect(status().isUnauthorized());
 	}
 
 }

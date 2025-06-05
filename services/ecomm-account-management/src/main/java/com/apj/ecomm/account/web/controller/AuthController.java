@@ -13,7 +13,6 @@ import com.apj.ecomm.account.domain.IAuthService;
 import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
-import com.apj.ecomm.account.web.exception.IncorrectCredentialsException;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +32,7 @@ public class AuthController {
 
 	@PostMapping("/login")
 	public Optional<String> login(@RequestBody @Valid LoginRequest request) {
-		return Optional.of(service.login(request).orElseThrow(IncorrectCredentialsException::new));
+		return service.login(request);
 	}
 
 }
