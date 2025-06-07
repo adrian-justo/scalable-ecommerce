@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,8 @@ import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
 import com.apj.ecomm.account.web.exception.EmailSmsMissingException;
-import com.apj.ecomm.account.web.exception.RoleMissingException;
+import com.apj.ecomm.account.web.exception.InvalidNotificationTypeException;
+import com.apj.ecomm.account.web.exception.InvalidRoleException;
 import com.apj.ecomm.account.web.exception.UserNotFoundException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -90,7 +92,7 @@ class UserServiceTest {
 		UserResponse userResponse = service.update("client123", request).get();
 
 		assertEquals(mapper.toResponse(updated), userResponse);
-		assertEquals(List.of(NotificationType.SMS), userResponse.notificationTypes());
+		assertEquals(Set.of(NotificationType.SMS), userResponse.notificationTypes());
 	}
 
 	@Test
@@ -119,10 +121,79 @@ class UserServiceTest {
 	}
 
 	@Test
-	void update_roleMissing() {
+	void update_invalidRole() {
 		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				List.of(), null);
-		assertThrows(RoleMissingException.class, () -> service.update("admin123", request));
+				Set.of(Role.ADMIN, Role.BUYER), null);
+		assertThrows(InvalidRoleException.class, () -> service.update("admin123", request));
+	}
+
+	@Test
+	void update_invalidNotificationType() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+				null, Set.of());
+		assertThrows(InvalidNotificationTypeException.class, () -> service.update("admin123", request));
+	}
+
+	@Test
+	void getValidatedTypes_emailOnlyNotif_hasMobile() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+				null, Set.of(NotificationType.EMAIL));
+		Set<NotificationType> types = service
+				.getValidatedTypes(mapper.updateEntity(request, mapper.toEntity(response.get(1))));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
+	}
+
+	@Test
+	void getValidatedTypes_smsOnlyNotif_hasEmail() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+				null, Set.of(NotificationType.SMS));
+		Set<NotificationType> types = service
+				.getValidatedTypes(mapper.updateEntity(request, mapper.toEntity(response.get(1))));
+		assertEquals(Set.of(NotificationType.SMS), types);
+	}
+
+	@Test
+	void getValidatedTypes_emailOnlyNotif_noEmail() {
+		UpdateUserRequest request = new UpdateUserRequest("", "+639031234567", null, null, null, null, null,
+				Set.of(NotificationType.EMAIL));
+		Set<NotificationType> types = service
+				.getValidatedTypes(mapper.updateEntity(request, mapper.toEntity(response.get(1))));
+		assertEquals(Set.of(NotificationType.SMS), types);
+	}
+
+	@Test
+	void getValidatedTypes_smsOnlyNotif_noMobile() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "", null, null, null, null, null,
+				Set.of(NotificationType.SMS));
+		Set<NotificationType> types = service
+				.getValidatedTypes(mapper.updateEntity(request, mapper.toEntity(response.get(1))));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
+	}
+
+	@Test
+	void getValidatedTypes_emailSmsNotif_noMobile() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "", null, null, null, null, null,
+				Set.of(NotificationType.SMS, NotificationType.EMAIL));
+		Set<NotificationType> types = service
+				.getValidatedTypes(mapper.updateEntity(request, mapper.toEntity(response.get(1))));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
+	}
+
+	@Test
+	void getValidatedTypes_emailSmsNotif_noEmail() {
+		UpdateUserRequest request = new UpdateUserRequest("", "+639031234567", null, null, null, null, null,
+				Set.of(NotificationType.SMS, NotificationType.EMAIL));
+		Set<NotificationType> types = service
+				.getValidatedTypes(mapper.updateEntity(request, mapper.toEntity(response.get(1))));
+		assertEquals(Set.of(NotificationType.SMS), types);
+	}
+
+	@Test
+	void getValidatedTypes_nullNotif_hasEmail() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "", null, null, null, null, null, null);
+		Set<NotificationType> types = service
+				.getValidatedTypes(mapper.updateEntity(request, mapper.toEntity(response.get(1))));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
 	}
 
 	@Test

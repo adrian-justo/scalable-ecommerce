@@ -18,20 +18,20 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/auth/")
 @RequiredArgsConstructor
 public class AuthController {
 
 	private final IAuthService service;
 
-	@PostMapping("/register")
+	@PostMapping("register")
 	@ResponseStatus(HttpStatus.CREATED)
 	public Optional<UserResponse> createUser(@RequestBody @Valid CreateUserRequest request) {
 		return service.register(request);
 	}
 
-	@PostMapping("/login")
-	public Optional<String> login(@RequestBody @Valid LoginRequest request) {
+	@PostMapping("login")
+	public String login(@RequestBody @Valid LoginRequest request) {
 		return service.login(request);
 	}
 

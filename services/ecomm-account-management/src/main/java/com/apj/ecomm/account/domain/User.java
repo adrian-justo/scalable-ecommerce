@@ -2,7 +2,7 @@ package com.apj.ecomm.account.domain;
 
 import java.time.Instant;
 import java.util.Collection;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -50,11 +50,10 @@ class User implements UserDetails {
 
 	@Enumerated(value = EnumType.STRING)
 	@ColumnDefault("'{BUYER}'")
-	private List<Role> roles;
+	private Set<Role> roles;
 
 	@Enumerated(value = EnumType.STRING)
-	@ColumnDefault("'{EMAIL}'")
-	private List<NotificationType> notificationTypes;
+	private Set<NotificationType> notificationTypes;
 
 	@CreationTimestamp
 	private Instant createdAt;

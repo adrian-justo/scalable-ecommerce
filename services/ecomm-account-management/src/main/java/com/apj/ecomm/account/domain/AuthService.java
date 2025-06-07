@@ -1,7 +1,10 @@
 package com.apj.ecomm.account.domain;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -29,6 +32,7 @@ class AuthService implements IAuthService {
 	private final TokenService token;
 
 	public Optional<UserResponse> register(CreateUserRequest request) {
+		request.validate();
 		return getUserByEither(request.username(), request.email(), request.mobileNo())
 				.map(existing -> saveUser(mapper.updateEntity(request, existing), request))
 				.orElse(saveUser(mapper.toEntity(request), request));
@@ -44,24 +48,39 @@ class AuthService implements IAuthService {
 	}
 
 	private Optional<UserResponse> saveUser(User user, CreateUserRequest request) {
+		user.setNotificationTypes(getValidatedTypes(user));
 		user.setPassword(encoder.encode(request.password()));
 		user.setActive(true);
 		return Optional.of(mapper.toResponse(repository.save(user)));
 	}
 
-	public Optional<String> login(LoginRequest request) {
-		return Optional.of(getUserByIdentifier(request.identifier())
-				.map(user -> authenticateUser(user.getUsername(), request.password()))
-				.orElseThrow(IncorrectCredentialsException::new));
+	Set<NotificationType> getValidatedTypes(User user) {
+		Set<NotificationType> types = user.getNotificationTypes() == null ? new HashSet<>()
+				: user.getNotificationTypes();
+		if (StringUtils.isBlank(user.getEmail()) && StringUtils.isNotBlank(user.getMobileNo())) {
+			types.remove(NotificationType.EMAIL);
+			types.add(NotificationType.SMS);
+		} else if (StringUtils.isBlank(user.getMobileNo())) {
+			types.remove(NotificationType.SMS);
+			types.add(NotificationType.EMAIL);
+		} else if (types.isEmpty()) {
+			if (StringUtils.isNotBlank(user.getEmail())) {
+				types.add(NotificationType.EMAIL);
+			} else if (StringUtils.isNotBlank(user.getMobileNo())) {
+				types.add(NotificationType.SMS);
+			}
+		}
+		return types;
 	}
 
-	private Optional<User> getUserByIdentifier(String identifier) {
-		return repository.findByUsernameOrEmailOrMobileNo(identifier, identifier, identifier).filter(User::isActive);
-	}
-
-	private String authenticateUser(String username, String password) {
-		Authentication auth = manager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
-		return auth.isAuthenticated() ? token.generate((User) auth.getPrincipal()) : "";
+	public String login(LoginRequest request) {
+		Authentication auth = manager
+				.authenticate(new UsernamePasswordAuthenticationToken(request.identifier(), request.password()));
+		if (auth.isAuthenticated()) {
+			return token.generate((User) auth.getPrincipal());
+		} else {
+			throw new IncorrectCredentialsException();
+		}
 	}
 
 }

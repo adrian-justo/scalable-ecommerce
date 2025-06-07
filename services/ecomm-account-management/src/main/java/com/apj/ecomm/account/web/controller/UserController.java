@@ -18,11 +18,16 @@ import com.apj.ecomm.account.domain.IUserService;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/users")
+@SecurityScheme(name = "authToken", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
+@SecurityRequirement(name = "authToken")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -40,10 +45,11 @@ public class UserController {
 	}
 
 	@PutMapping("/{username}")
-	public Optional<UserResponse> updateUser(@PathVariable String username, @RequestBody @Valid UpdateUserRequest request) {
+	public Optional<UserResponse> updateUser(@PathVariable String username,
+			@RequestBody @Valid UpdateUserRequest request) {
 		return service.update(username, request);
 	}
-	
+
 	@DeleteMapping("/{username}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteById(@PathVariable String username) {

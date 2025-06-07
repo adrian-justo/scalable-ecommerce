@@ -1,0 +1,51 @@
+package com.apj.ecomm.gateway.security;
+
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+
+import com.apj.ecomm.gateway.security.model.UserResponse;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class AuthFilter implements WebFilter {
+
+	private final TokenService tokenService;
+
+	@Override
+	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+		String requestToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+		if (requestToken != null && requestToken.startsWith("Bearer")) {
+			String token = requestToken.substring(7);
+
+			if (tokenService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
+				UserResponse user = tokenService.getUser(token);
+				SecurityContext context = new SecurityContextImpl(
+						new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+				return chain.filter(exchange)
+						.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
+			} else {
+				log.error("TOKEN IS MALFORMED OR EXPIRED");
+			}
+
+		} else {
+			log.error("TOKEN NOT FOUND");
+		}
+
+		return chain.filter(exchange);
+	}
+
+}

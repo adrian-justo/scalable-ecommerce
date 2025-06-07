@@ -1,6 +1,8 @@
 spring:
   application:
     name: ecomm-api-gateway
+  profiles:
+        active: dev
   cloud:
     gateway:
       server:
@@ -45,9 +47,7 @@ management:
   health:
     circuitbreakers:
       enabled: true
-    ratelimiters:
-      enabled: true
-        
+
 resilience4j:
   circuitbreaker:
     configs:
@@ -61,11 +61,5 @@ resilience4j:
   timelimiter:
     configs:
       default:
-        timeout-duration: 3s
+        timeout-duration: 5s
         cancel-running-future: true
-        
-logging:
-  level:
-    root: info
-    '[org.springframework.cloud.gateway]': trace
-    '[org.springframework.cloud.gateway.route.RouteDefinitionLocator]': info
