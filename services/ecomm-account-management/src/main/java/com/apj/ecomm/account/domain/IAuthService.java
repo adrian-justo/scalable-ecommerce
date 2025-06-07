@@ -10,6 +10,6 @@ public interface IAuthService {
 
 	Optional<UserResponse> register(CreateUserRequest request);
 
-	Optional<String> login(LoginRequest request);
+	String login(LoginRequest request);
 
 }

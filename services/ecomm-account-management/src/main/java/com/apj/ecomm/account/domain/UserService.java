@@ -1,8 +1,9 @@
 package com.apj.ecomm.account.domain;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.PageRequest;
@@ -15,8 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
-import com.apj.ecomm.account.web.exception.EmailSmsMissingException;
-import com.apj.ecomm.account.web.exception.RoleMissingException;
 import com.apj.ecomm.account.web.exception.UserNotFoundException;
 
 import lombok.RequiredArgsConstructor;
@@ -42,38 +41,29 @@ class UserService implements IUserService {
 	}
 
 	public Optional<UserResponse> update(String username, UpdateUserRequest request) {
-		sanitize(request);
-		return findBy(username).map(existing -> mapper.toResponse(update(request, existing)));
-	}
-
-	private void sanitize(UpdateUserRequest request) {
-		if (request.email() != null && request.email().isBlank() && request.mobileNo() != null
-				&& request.mobileNo().isBlank()) {
-			throw new EmailSmsMissingException();
-		}
-		if (request.roles() != null && request.roles().isEmpty()) {
-			throw new RoleMissingException();
-		}
+		request.validate();
 		if (repository.existsByEmailOrMobileNo(request.email(), request.mobileNo())) {
 			throw new AlreadyRegisteredException();
 		}
+		return findBy(username).map(existing -> update(mapper.updateEntity(request, existing), request));
 	}
 
-	private User update(UpdateUserRequest updated, User existing) {
-		if (updated.password() != null) {
-			existing.setPassword(encoder.encode(updated.password()));
+	private UserResponse update(User updated, UpdateUserRequest request) {
+		updated.setNotificationTypes(getValidatedTypes(updated));
+		if (request.password() != null) {
+			updated.setPassword(encoder.encode(request.password()));
 		}
-		existing.setNotificationTypes(getUpdatedNotificationTypes(updated));
-		return repository.save(mapper.updateEntity(updated, existing));
+		return mapper.toResponse(repository.save(updated));
 	}
 
-	private List<NotificationType> getUpdatedNotificationTypes(UpdateUserRequest updated) {
-		List<NotificationType> types = new ArrayList<>();
-		if (StringUtils.isNotBlank(updated.email())) {
-			types.add(NotificationType.EMAIL);
-		}
-		if (StringUtils.isNotBlank(updated.mobileNo())) {
+	Set<NotificationType> getValidatedTypes(User updated) {
+		Set<NotificationType> types = new HashSet<>(updated.getNotificationTypes());
+		if (StringUtils.isBlank(updated.getEmail()) && StringUtils.isNotBlank(updated.getMobileNo())) {
+			types.remove(NotificationType.EMAIL);
 			types.add(NotificationType.SMS);
+		} else if (StringUtils.isBlank(updated.getMobileNo())) {
+			types.remove(NotificationType.SMS);
+			types.add(NotificationType.EMAIL);
 		}
 		return types;
 	}

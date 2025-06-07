@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,10 @@ import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
+import com.apj.ecomm.account.web.exception.EmailSmsMissingException;
 import com.apj.ecomm.account.web.exception.IncorrectCredentialsException;
+import com.apj.ecomm.account.web.exception.InvalidNotificationTypeException;
+import com.apj.ecomm.account.web.exception.InvalidRoleException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +53,9 @@ class AuthServiceTest {
 	@Mock
 	private AuthenticationManager manager;
 
+	@Mock
+	private TokenService token;
+
 	@InjectMocks
 	private AuthService service;
 
@@ -65,7 +72,7 @@ class AuthServiceTest {
 	@Test
 	void register_success() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", List.of(Role.SELLER));
+				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		User user = mapper.toEntity(request);
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
@@ -77,9 +84,9 @@ class AuthServiceTest {
 
 	@Test
 	void register_alreadyRegistered() {
-		UserResponse userResponse = response.get(0);
-		CreateUserRequest request = new CreateUserRequest(userResponse.username(), userResponse.email(),
-				userResponse.mobileNo(), userResponse.password(), userResponse.name(), userResponse.roles());
+		UserResponse user = response.get(1);
+		CreateUserRequest request = new CreateUserRequest(user.username(), user.email(), user.mobileNo(),
+				user.password(), user.name(), user.roles(), user.notificationTypes());
 		User existing = mapper.toEntity(request);
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
@@ -89,14 +96,91 @@ class AuthServiceTest {
 	}
 
 	@Test
+	void register_emailSmsMissing() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "", "", "$elL3r12", "Seller Name",
+				Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		assertThrows(EmailSmsMissingException.class, () -> service.register(request));
+	}
+
+	@Test
+	void register_invalidRole() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", Set.of(Role.ADMIN, Role.SELLER), Set.of(NotificationType.EMAIL));
+		assertThrows(InvalidRoleException.class, () -> service.register(request));
+	}
+
+	@Test
+	void register_invalidNotificationType() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of());
+		assertThrows(InvalidNotificationTypeException.class, () -> service.register(request));
+	}
+
+	@Test
+	void getValidatedTypes_emailOnlyNotif_hasMobile() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
+	}
+
+	@Test
+	void getValidatedTypes_smsOnlyNotif_hasEmail() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
+		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
+		assertEquals(Set.of(NotificationType.SMS), types);
+	}
+
+	@Test
+	void getValidatedTypes_emailOnlyNotif_noEmail() {
+		CreateUserRequest request = new CreateUserRequest("seller123", null, "+639031234567", "$elL3r12", "Seller Name",
+				Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
+		assertEquals(Set.of(NotificationType.SMS), types);
+	}
+
+	@Test
+	void getValidatedTypes_smsOnlyNotif_noMobile() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", null, "$elL3r12",
+				"Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
+		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
+	}
+
+	@Test
+	void getValidatedTypes_emailSmsNotif_noMobile() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", null, "$elL3r12",
+				"Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.SMS, NotificationType.EMAIL));
+		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
+	}
+
+	@Test
+	void getValidatedTypes_emailSmsNotif_noEmail() {
+		CreateUserRequest request = new CreateUserRequest("seller123", null, "+639031234567", "$elL3r12", "Seller Name",
+				Set.of(Role.SELLER), Set.of(NotificationType.SMS, NotificationType.EMAIL));
+		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
+		assertEquals(Set.of(NotificationType.SMS), types);
+	}
+
+	@Test
+	void getValidatedTypes_nullNotif_hasEmailMobile() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", Set.of(Role.SELLER), null);
+		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
+		assertEquals(Set.of(NotificationType.EMAIL), types);
+	}
+
+	@Test
 	void login_success() {
 		UserResponse existing = response.get(0);
 		LoginRequest request = new LoginRequest(existing.email(), existing.password());
-		Optional<User> user = Optional.of(mapper.toEntity(response.get(0)));
+		User user = mapper.toEntity(existing);
 
-		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString())).thenReturn(user);
-		when(manager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-				.thenReturn(new UsernamePasswordAuthenticationToken(existing.username(), existing.password()));
+		when(manager.authenticate(any()))
+				.thenReturn(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+		when(token.generate(any())).thenReturn("jwt.token.here");
 
 		assertTrue(!service.login(request).isEmpty());
 	}
@@ -104,8 +188,8 @@ class AuthServiceTest {
 	@Test
 	void login_incorrectCredentials() {
 		LoginRequest request = new LoginRequest("nonexistent", "wrongPassword");
-		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
-				.thenReturn(Optional.empty());
+		when(manager.authenticate(any())).thenReturn(
+				UsernamePasswordAuthenticationToken.unauthenticated(request.identifier(), request.password()));
 		assertThrows(IncorrectCredentialsException.class, () -> service.login(request));
 	}
 

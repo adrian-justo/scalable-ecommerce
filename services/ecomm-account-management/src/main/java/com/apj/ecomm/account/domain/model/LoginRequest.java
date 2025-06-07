@@ -1,8 +1,10 @@
 package com.apj.ecomm.account.domain.model;
 
+import com.apj.ecomm.account.constants.AppConstants;
+
 import jakarta.validation.constraints.NotBlank;
 
-public record LoginRequest(@NotBlank(message = "Please input your Username/Email address/Mobile no.") String identifier,
-		@NotBlank(message = "Please input your password") String password) {
+public record LoginRequest(@NotBlank(message = AppConstants.MSG_IDENTIFIER_BLANK) String identifier,
+		@NotBlank(message = AppConstants.MSG_PASSWORD_BLANK) String password) {
 
 }

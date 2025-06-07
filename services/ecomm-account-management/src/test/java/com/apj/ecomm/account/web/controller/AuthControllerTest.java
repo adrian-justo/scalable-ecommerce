@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,9 +65,9 @@ class AuthControllerTest {
 	@Test
 	void userRegistration_success() throws Exception {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", List.of(Role.SELLER));
+				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		UserResponse userResponse = new UserResponse(request.username(), request.email(), request.mobileNo(),
-				request.password(), request.name(), "", "", request.roles(), List.of(NotificationType.EMAIL), true);
+				request.password(), request.name(), "", "", request.roles(), request.notificationTypes(), true);
 
 		when(service.register(any())).thenReturn(Optional.of(userResponse));
 		ResultActions action = mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
@@ -79,7 +80,7 @@ class AuthControllerTest {
 
 	@Test
 	void userRegistration_invalidDetails() throws Exception {
-		CreateUserRequest request = new CreateUserRequest("", "", "", "", "", null);
+		CreateUserRequest request = new CreateUserRequest("", "", "", "", "", null, null);
 		mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
 	}
@@ -88,9 +89,8 @@ class AuthControllerTest {
 	void login_success() throws Exception {
 		UserResponse userResponse = response.get(0);
 		LoginRequest request = new LoginRequest(userResponse.username(), userResponse.password());
-		String jwt = "jwt.token.here";
 
-		when(service.login(any())).thenReturn(Optional.of(jwt));
+		when(service.login(any())).thenReturn("jwt.token.here");
 		mvc.perform(post(uri + "/login").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isOk());
 	}

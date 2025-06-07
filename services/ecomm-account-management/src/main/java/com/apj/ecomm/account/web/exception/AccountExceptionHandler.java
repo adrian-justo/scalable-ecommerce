@@ -21,7 +21,7 @@ class AccountExceptionHandler {
 	@ExceptionHandler(AlreadyRegisteredException.class)
 	public ProblemDetail handle(AlreadyRegisteredException e) {
 		return getDetail(HttpStatus.CONFLICT, e.getMessage(),
-				"Username, email, and/or mobile has already been registered");
+				"Username, email, and/or mobile number has already been registered");
 	}
 
 	@ExceptionHandler(IncorrectCredentialsException.class)
@@ -37,12 +37,17 @@ class AccountExceptionHandler {
 	@ExceptionHandler(EmailSmsMissingException.class)
 	public ProblemDetail handle(EmailSmsMissingException e) {
 		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage(),
-				"At least one of email or mobile no. must be provided");
+				"Please provide at least one of email or mobile number");
 	}
 
-	@ExceptionHandler(RoleMissingException.class)
-	public ProblemDetail handle(RoleMissingException e) {
-		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage(), "At least one role must be set");
+	@ExceptionHandler(InvalidRoleException.class)
+	public ProblemDetail handle(InvalidRoleException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage(), "Roles set is invalid");
+	}
+
+	@ExceptionHandler(InvalidNotificationTypeException.class)
+	public ProblemDetail handle(InvalidNotificationTypeException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage(), "Notification type set is invalid");
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)

@@ -29,7 +29,6 @@ public class TokenService {
 
 	public String generate(User user) {
 		Map<String, Object> claims = new HashMap<>();
-		claims.put("userId", user.getId());
 		claims.put("roles", user.getRoles());
 		return Jwts.builder().claims(claims).subject(user.getUsername()).issuedAt(Date.from(Instant.now()))
 				.expiration(Date.from(Instant.now().plus(Duration.ofMinutes(30))))
