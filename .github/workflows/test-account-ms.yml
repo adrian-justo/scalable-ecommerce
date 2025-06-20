@@ -1,14 +1,17 @@
 name: Build and Test Account Management Microservice
 
+env:
+  MS_NAME: ecomm-api-gateway
+
 on:
   push:
     paths:
-      - 'services/ecomm-account-management/**'
-    branches-ignore:
+      - 'services/${{ env.MS_NAME }}/**'
+    branches-ignore: 
       - main
 
 jobs:
-  build-and-test:
+  build-and-push:
     runs-on: ubuntu-latest    
     steps:
     - name: Checkout code
@@ -21,6 +24,6 @@ jobs:
         distribution: 'temurin'
         cache: maven
         
-    - name: All the Tests and Coverage check
-      run: mvn clean install
-      working-directory: services/ecomm-account-management
+    - name: Build with Maven
+      run: mvn clean test
+      working-directory: services/${{ env.MS_NAME }}
