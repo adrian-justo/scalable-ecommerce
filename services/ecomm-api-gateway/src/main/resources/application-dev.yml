@@ -1,8 +1,43 @@
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://host.docker.internal:8082/eureka/ # Change host.docker.internal to localhost if running locally
+
 logging:
   level:
     root: info
     '[org.springframework.cloud.gateway]': trace
     '[org.springframework.cloud.gateway.route.RouteDefinitionLocator]': info
+    
+management:
+  server:
+    port: 18080
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+  metrics:
+    distribution:
+     percentiles-histogram:
+       '[http.server.requests]': true
+  observations:
+    key-values:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://host.docker.internal:4317
+      transport: grpc
 
 secret:
   key: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437

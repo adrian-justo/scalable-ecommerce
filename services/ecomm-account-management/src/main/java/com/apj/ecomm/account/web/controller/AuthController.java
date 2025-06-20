@@ -14,11 +14,13 @@ import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 
+import io.micrometer.observation.annotation.Observed;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/auth/")
+@Observed(name = "controller.auth")
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -27,6 +29,7 @@ public class AuthController {
 	@PostMapping("register")
 	@ResponseStatus(HttpStatus.CREATED)
 	public Optional<UserResponse> createUser(@RequestBody @Valid CreateUserRequest request) {
+		request.validate();
 		return service.register(request);
 	}
 

@@ -1,0 +1,11 @@
+name: scalable-ecommerce
+
+include:
+  - ../services/ecomm-account-management/database.yml
+  - microservice.yml
+  - infrastructure.yml
+  - monitoring.yml
+
+networks:
+  ecomm-net:
+    driver: bridge

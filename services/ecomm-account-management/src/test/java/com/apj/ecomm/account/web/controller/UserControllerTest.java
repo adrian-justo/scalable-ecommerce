@@ -1,5 +1,6 @@
 package com.apj.ecomm.account.web.controller;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,14 +33,16 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.apj.ecomm.account.domain.IUserService;
+import com.apj.ecomm.account.domain.Role;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
+import com.apj.ecomm.account.web.exception.RequestArgumentNotValidException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@WebMvcTest(controllers = UserController.class, properties = { "eureka.client.enabled=false",
-		"spring.cloud.config.enabled=false" })
+@WebMvcTest(controllers = UserController.class, properties = { "docker.compose.lifecycle-management=start-and-stop",
+		"eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
 @AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -111,6 +115,26 @@ class UserControllerTest {
 		UpdateUserRequest request = new UpdateUserRequest("updatedemail.com", "0", null, null, null, null, null, null);
 		mvc.perform(put(uri + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)))
 				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void accountManagement_emailSmsMissing() {
+		UpdateUserRequest request = new UpdateUserRequest("", "", null, null, null, null, null, null);
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
+	}
+
+	@Test
+	void accountManagement_invalidRole() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+				Set.of(Role.ADMIN, Role.BUYER), null);
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
+	}
+
+	@Test
+	void accountManagement_invalidNotificationType() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+				null, Set.of());
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test

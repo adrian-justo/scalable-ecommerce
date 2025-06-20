@@ -1,0 +1,16 @@
+services:
+  account-management:
+#    build: ../services/ecomm-account-management # Use for local deployment
+    image: adrianjusto/ecomm-account-management
+    container_name: ecomm-account-management
+    ports:
+      - "8083:8083"
+    restart: unless-stopped
+    depends_on:
+      - account-postgres
+      - service-registry
+      - api-gateway
+    networks:
+      - ecomm-net
+    labels:
+      logging: "promtail"

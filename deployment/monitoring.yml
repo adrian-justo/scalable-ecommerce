@@ -1,0 +1,62 @@
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: ecomm-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/config.yml:/etc/deployment/prometheus.yml:ro
+    command: "--config.file=/etc/deployment/prometheus.yml"
+    networks:
+      - ecomm-net
+      
+  promtail:
+    image: grafana/promtail
+    container_name: ecomm-promtail
+    volumes:
+      - ./promtail/config.yml:/etc/deployment/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: "--config.file=/etc/deployment/promtail.yml"
+    networks:
+      - ecomm-net
+      
+  loki:
+    image: grafana/loki
+    container_name: ecomm-loki
+    ports:
+      - "3100:3100"
+    command: "-config.file=/etc/loki/local-config.yaml"
+    depends_on:
+      - promtail
+    networks:
+      - ecomm-net
+      
+  tempo:
+    image: grafana/tempo
+    container_name: ecomm-tempo
+    ports:
+      - 3200:3200
+      - 4317:4317 # otlp grpc
+      - 4318:4318 # otlp http
+    volumes:
+      - ./tempo/config.yml:/etc/deployment/tempo.yml:ro
+    command: "--config.file=/etc/deployment/tempo.yml"
+    networks:
+      - ecomm-net
+            
+  grafana:
+    image: grafana/grafana
+    container_name: ecomm-grafana
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    depends_on:
+      - tempo
+    networks:
+      - ecomm-net

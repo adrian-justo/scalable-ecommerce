@@ -27,9 +27,6 @@ import org.springframework.data.domain.PageRequest;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
-import com.apj.ecomm.account.web.exception.EmailSmsMissingException;
-import com.apj.ecomm.account.web.exception.InvalidNotificationTypeException;
-import com.apj.ecomm.account.web.exception.InvalidRoleException;
 import com.apj.ecomm.account.web.exception.UserNotFoundException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -86,7 +83,7 @@ class UserServiceTest {
 		User existing = mapper.toEntity(response.get(1));
 		User updated = mapper.updateEntity(request, existing);
 
-		when(repository.existsByEmailOrMobileNo(anyString(), anyString())).thenReturn(false);
+		when(repository.findByEmailOrMobileNo(anyString(), anyString())).thenReturn(Optional.empty());
 		when(repository.findByUsername(anyString())).thenReturn(Optional.of(existing));
 		when(repository.save(any())).thenReturn(updated);
 		UserResponse userResponse = service.update("client123", request).get();
@@ -100,7 +97,7 @@ class UserServiceTest {
 		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
 				null, null);
 
-		when(repository.existsByEmailOrMobileNo(anyString(), anyString())).thenReturn(false);
+		when(repository.findByEmailOrMobileNo(anyString(), anyString())).thenReturn(Optional.empty());
 		when(repository.findByUsername(anyString())).thenReturn(Optional.empty());
 
 		assertThrows(UserNotFoundException.class, () -> service.update("nonexistent", request));
@@ -110,28 +107,11 @@ class UserServiceTest {
 	void update_alreadyRegistered() {
 		UpdateUserRequest request = new UpdateUserRequest("client123@mail.com", "+639021234567", null, null, null, null,
 				null, null);
-		when(repository.existsByEmailOrMobileNo(anyString(), anyString())).thenReturn(true);
+		User existing = mapper.toEntity(response.get(1));
+
+		when(repository.findByEmailOrMobileNo(anyString(), anyString())).thenReturn(Optional.of(existing));
+
 		assertThrows(AlreadyRegisteredException.class, () -> service.update("admin123", request));
-	}
-
-	@Test
-	void update_emailSmsMissing() {
-		UpdateUserRequest request = new UpdateUserRequest("", "", null, null, null, null, null, null);
-		assertThrows(EmailSmsMissingException.class, () -> service.update("admin123", request));
-	}
-
-	@Test
-	void update_invalidRole() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				Set.of(Role.ADMIN, Role.BUYER), null);
-		assertThrows(InvalidRoleException.class, () -> service.update("admin123", request));
-	}
-
-	@Test
-	void update_invalidNotificationType() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				null, Set.of());
-		assertThrows(InvalidNotificationTypeException.class, () -> service.update("admin123", request));
 	}
 
 	@Test
