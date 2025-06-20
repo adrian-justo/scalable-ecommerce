@@ -1,11 +1,14 @@
 name: Build and Push Account Management Microservice
 
-on: workflow_dispatch
-  #pull_request:
-    #paths:
-      #- 'services/ecomm-account-management/**'
-    #branches: 
-      #- main
+env:
+  MS_NAME: ecomm-account-management
+
+on:
+  pull_request:
+    paths:
+      - 'services/${{ env.MS_NAME }}/**'
+    branches: 
+      - main
 
 jobs:
   build-and-push:
@@ -22,15 +25,16 @@ jobs:
         cache: maven
         
     - name: Build with Maven
-      run: mvn clean install -DskipTests
-      working-directory: services/ecomm-account-management
+      run: mvn clean package -DskipTests
+      working-directory: services/${{ env.MS_NAME }}
 
     - name: Build & Push to Docker Hub
       uses: mr-smithers-excellent/docker-build-push@v6
       with:
-        image: ${{ secrets.DOCKER_USERNAME }}/ecomm-account-management
+        image: ${{ secrets.DOCKER_USERNAME }}/${{ env.MS_NAME }}
         tags: latest
         registry: docker.io
-        dockerfile: services/ecomm-account-management/Dockerfile
+        dockerfile: services/${{ env.MS_NAME }}/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+        buildArgs: 'JAR_FILE=services/${{ env.MS_NAME }}/target/*.jar'
