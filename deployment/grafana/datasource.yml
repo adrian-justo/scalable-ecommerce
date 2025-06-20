@@ -1,0 +1,43 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://ecomm-prometheus:9090
+    editable: false
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://ecomm-tempo:3200
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: 'loki'
+      nodeGraph:
+        enabled: true
+      tracesToMetrics:
+        datasourceUid: 'prometheus'
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://ecomm-loki:3100
+    editable: false
+    jsonData:
+      derivedFields:
+        -   datasourceUid: tempo
+            matcherRegex: \[.+,(.+?),
+            name: TraceID
+            url: $${__value.raw}

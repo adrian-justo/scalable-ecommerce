@@ -1,16 +1,5 @@
-services:
-  postgres:
-    container_name: account-postgres
-    image: postgres
-    environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
-      POSTGRES_DB: users_db
-    ports:
-      - 5432:5432
-    networks:
-      - ecomm-net
-    restart: unless-stopped
+include:
+  - database.yml
     
 networks:
   ecomm-net:

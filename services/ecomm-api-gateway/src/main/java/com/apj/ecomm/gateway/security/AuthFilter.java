@@ -38,11 +38,11 @@ public class AuthFilter implements WebFilter {
 				return chain.filter(exchange)
 						.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
 			} else {
-				log.error("TOKEN IS MALFORMED OR EXPIRED");
+				log.error("Token is malformed or expired");
 			}
 
 		} else {
-			log.error("TOKEN NOT FOUND");
+			log.error("Token not provided in request header");
 		}
 
 		return chain.filter(exchange);

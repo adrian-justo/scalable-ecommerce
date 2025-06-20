@@ -1,5 +1,6 @@
 package com.apj.ecomm.account.web.controller;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -30,12 +31,13 @@ import com.apj.ecomm.account.domain.Role;
 import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
+import com.apj.ecomm.account.web.exception.RequestArgumentNotValidException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@WebMvcTest(controllers = AuthController.class, properties = { "eureka.client.enabled=false",
-		"spring.cloud.config.enabled=false" })
+@WebMvcTest(controllers = AuthController.class, properties = { "docker.compose.lifecycle-management=start-and-stop",
+		"eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
 @AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
@@ -83,6 +85,27 @@ class AuthControllerTest {
 		CreateUserRequest request = new CreateUserRequest("", "", "", "", "", null, null);
 		mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void userRegistration_emailSmsMissing() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "", "", "$elL3r12", "Seller Name",
+				Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
+	}
+
+	@Test
+	void userRegistration_invalidRole() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", Set.of(Role.ADMIN, Role.SELLER), Set.of(NotificationType.EMAIL));
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
+	}
+
+	@Test
+	void userRegistration_invalidNotificationType() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of());
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test

@@ -12,11 +12,44 @@ spring:
   sql:
     init:
       mode: always
+  docker:
+    compose:
+      lifecycle-management: none  # Set to 'start-and-stop' if you want to run the application independently
+      
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://host.docker.internal:8082/eureka/ # Change host.docker.internal to localhost if running locally
       
 logging:
   level:
     sql: debug
     '[org.hibernate.orm.jdbc.bind]': trace
+    
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    distribution:
+      percentiles-histogram:
+        '[http.server.requests]': true
+  observations:
+    key-values:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://host.docker.internal:4317
+      transport: grpc
 
 secret:
   key: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437

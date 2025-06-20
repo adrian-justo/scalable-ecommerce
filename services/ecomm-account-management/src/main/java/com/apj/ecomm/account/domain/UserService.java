@@ -1,7 +1,9 @@
 package com.apj.ecomm.account.domain;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -18,10 +20,12 @@ import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
 import com.apj.ecomm.account.web.exception.UserNotFoundException;
 
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
+@Observed(name = "service.user")
 @RequiredArgsConstructor
 class UserService implements IUserService {
 
@@ -41,14 +45,24 @@ class UserService implements IUserService {
 	}
 
 	public Optional<UserResponse> update(String username, UpdateUserRequest request) {
-		request.validate();
-		if (repository.existsByEmailOrMobileNo(request.email(), request.mobileNo())) {
-			throw new AlreadyRegisteredException();
-		}
-		return findBy(username).map(existing -> update(mapper.updateEntity(request, existing), request));
+		validateUpdate(request.email(), request.mobileNo());
+		return findBy(username).map(existing -> updateUser(mapper.updateEntity(request, existing), request));
 	}
 
-	private UserResponse update(User updated, UpdateUserRequest request) {
+	private void validateUpdate(String email, String mobileNo) {
+		repository.findByEmailOrMobileNo(email, mobileNo).ifPresent(user -> {
+			Map<String, List<String>> existing = new HashMap<>();
+			if (email != null && email.equals(user.getEmail())) {
+				existing.put("email", List.of(email));
+			}
+			if (mobileNo != null && mobileNo.equals(user.getMobileNo())) {
+				existing.put("mobileNo", List.of(mobileNo));
+			}
+			throw new AlreadyRegisteredException(existing);
+		});
+	}
+
+	private UserResponse updateUser(User updated, UpdateUserRequest request) {
 		updated.setNotificationTypes(getValidatedTypes(updated));
 		if (request.password() != null) {
 			updated.setPassword(encoder.encode(request.password()));

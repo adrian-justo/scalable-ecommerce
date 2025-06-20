@@ -40,9 +40,16 @@ class User implements UserDetails {
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
+
+	@Column(unique = true, nullable = false)
 	private String username;
+
+	@Column(unique = true)
 	private String email;
+
+	@Column(unique = true)
 	private String mobileNo;
+
 	private String password;
 	private String name;
 	private String shopName;
