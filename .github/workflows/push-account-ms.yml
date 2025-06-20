@@ -28,10 +28,10 @@ jobs:
     - name: Build & Push to Docker Hub
       uses: mr-smithers-excellent/docker-build-push@v6
       with:
-        image: adrianjusto/ecomm-account-management
+        image: ${{ secrets.DOCKER_USERNAME }}/ecomm-account-management
         tags: latest
         registry: docker.io
-        directory: .
-        dockerfile: services/ecomm-account-management/Dockerfile
+        directory: ./services/ecomm-account-management
+        dockerfile: Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
