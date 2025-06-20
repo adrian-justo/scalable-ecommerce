@@ -37,4 +37,4 @@ jobs:
         dockerfile: services/${{ env.MS_NAME }}/Dockerfile
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-        buildArgs: 'JAR_FILE=services/ecomm-api-gateway/target/*.jar'
+        buildArgs: 'JAR_FILE=services/${{ env.MS_NAME }}/target/*.jar'
