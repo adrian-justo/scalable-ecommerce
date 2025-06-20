@@ -3,12 +3,12 @@ name: Build and Push API Gateway
 env:
   MS_NAME: ecomm-api-gateway
 
-on: workflow_dispatch
-  #push:
-    #paths:
-      #- 'services/${{ env.MS_NAME }}/**'
-    #branches: 
-      #- main
+on:
+  pull_request:
+    paths:
+      - 'services/${{ env.MS_NAME }}/**'
+    branches: 
+      - main
 
 jobs:
   build-and-push:
