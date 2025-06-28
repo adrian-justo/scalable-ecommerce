@@ -37,8 +37,7 @@ import io.restassured.RestAssured;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-		"docker.compose.lifecycle-management=start-and-stop", "eureka.client.enabled=false",
-		"spring.cloud.config.enabled=false" })
+		"eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class EcommAccountManagementApplicationTests {
 

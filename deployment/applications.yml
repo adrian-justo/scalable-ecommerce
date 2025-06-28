@@ -1,0 +1,9 @@
+name: scalable-ecomm-apps
+
+include:
+  - ../services/ecomm-account-management/database.yml
+  - microservice.yml
+
+networks:
+  ecomm-net:
+    external: true

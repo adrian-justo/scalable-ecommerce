@@ -10,10 +10,10 @@
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>com.apj.ecomm</groupId>
-  <artifactId>ecomm-service-registry</artifactId>
+  <artifactId>ecomm-config-server</artifactId>
   <version>1.0.0</version>
-  <name>ecomm-service-registry</name>
-  <description>Service Registry for Scalable E-Commerce Platform</description>
+  <name>ecomm-config-server</name>
+  <description>Config Server for Scalable E-Commerce Platform</description>
   <url />
   <licenses>
     <license />
@@ -37,19 +37,19 @@
   <dependencies>
     <dependency>
       <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+      <artifactId>spring-cloud-config-server</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-starter-config</artifactId>
+      <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.cloud</groupId>
       <artifactId>spring-cloud-starter-bus-amqp</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.retry</groupId>
-      <artifactId>spring-retry</artifactId>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-config-monitor</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

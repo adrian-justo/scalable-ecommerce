@@ -1,11 +1,11 @@
 services:
   account-postgres:
-    container_name: account-postgres
     image: postgres
+    container_name: account-postgres
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: pass
       POSTGRES_DB: users_db
+      POSTGRES_USER: ${ACCOUNT_PG_USER:-user}
+      POSTGRES_PASSWORD: ${ACCOUNT_PG_PASSWORD:-pass}
     ports:
       - 5432:5432
     networks:

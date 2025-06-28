@@ -11,6 +11,7 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 
+import com.apj.ecomm.gateway.constants.Paths;
 import com.apj.ecomm.gateway.security.model.UserResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -23,26 +24,31 @@ import reactor.core.publisher.Mono;
 public class AuthFilter implements WebFilter {
 
 	private final TokenService tokenService;
+	private final Paths paths;
 
 	@Override
 	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-		String requestToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+		String path = exchange.getRequest().getPath().value();
 
-		if (requestToken != null && requestToken.startsWith("Bearer")) {
-			String token = requestToken.substring(7);
+		if (paths.permitted().stream().noneMatch(s -> path.matches(s.replace("*", ".*").replace(".*.*", ".*")))) {
+			String requestToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
-			if (tokenService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
-				UserResponse user = tokenService.getUser(token);
-				SecurityContext context = new SecurityContextImpl(
-						new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
-				return chain.filter(exchange)
-						.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
+			if (requestToken != null && requestToken.startsWith("Bearer")) {
+				String token = requestToken.substring(7);
+
+				if (tokenService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
+					UserResponse user = tokenService.getUser(token);
+					SecurityContext context = new SecurityContextImpl(
+							new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+					return chain.filter(exchange)
+							.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
+				} else {
+					log.error("Token is malformed or expired");
+				}
+
 			} else {
-				log.error("Token is malformed or expired");
+				log.error("Token not provided in request header for path: {}", path);
 			}
-
-		} else {
-			log.error("Token not provided in request header");
 		}
 
 		return chain.filter(exchange);

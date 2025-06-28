@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: ecomm-config-server
+  cloud.config.server:
+    git:
+      uri: ${GIT_URI:https://github.com/user/your-private-repo}
+      username: ${GIT_USERNAME:user}
+      password: ${GIT_PASSWORD:pass}
+
+server.port: 8081
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client.service-url:
+    defaultZone: ${EUREKA_SERVER:http://localhost:8082/eureka/}
+    
+management:
+  endpoints.web:
+    exposure.include: '*'

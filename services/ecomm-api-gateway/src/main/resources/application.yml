@@ -1,48 +1,93 @@
+paths:
+  permitted:
+    - /fallback/**
+    - /v3/api-docs/**
+    - /swagger-ui.html
+    - /swagger-ui/**
+    - /webjars/**
+    - /actuator/**
+    - /api/*/auth/**
+  adminOnly:
+    - /api/*/users
+  buyerOnly:
+    - ''
+  sellerOnly:
+    - ''
+  nonSeller:
+    - ''
+  nonBuyer:
+    - ''
+  userBased:
+    - /api/*/users/**
+
 spring:
   application:
     name: ecomm-api-gateway
-  profiles:
-        active: dev
   reactor:
     context-propagation: auto
-  cloud:
-    gateway:
-      server:
-        webflux:
-          routes:
-            - id: Account Management Microservice
-              uri: lb://ECOMM-ACCOUNT-MANAGEMENT
-              predicates:
-                - Path=/api/*/users/**
-              filters:
-                - name: CircuitBreaker
-                  args:
-                    fallbackUri: forward:/fallback/account-management
-                    
-            - id: Account Management Microservice - Authorization
-              uri: lb://ECOMM-ACCOUNT-MANAGEMENT
-              predicates:
-                - Path=/api/*/auth/**
-              filters:
-                - name: CircuitBreaker
-                  args:
-                    fallbackUri: forward:/fallback/account-management
+  config:
+    import: 'optional:configserver:'
+  cloud.gateway.server.webflux.routes:
+    - id: Account Management Microservice
+      uri: lb://ECOMM-ACCOUNT-MANAGEMENT
+      predicates:
+        - Path=/api/*/users/**
+      filters:
+        - name: CircuitBreaker
+          args:
+            fallbackUri: forward:/fallback/account-management
+            
+    - id: Account Management Microservice - Authorization
+      uri: lb://ECOMM-ACCOUNT-MANAGEMENT
+      predicates:
+        - Path=/api/*/auth/**
+      filters:
+        - name: CircuitBreaker
+          args:
+            fallbackUri: forward:/fallback/account-management
 
-server:
-  port: 8080
+server.port: 8080
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client.service-url:
+    defaultZone: ${EUREKA_SERVER:http://localhost:8082/eureka/}
+
+logging.level:
+  root: info
+  '[org.springframework.cloud.gateway]': trace
+  '[org.springframework.cloud.gateway.route.RouteDefinitionLocator]': info
+  '[org.springframework.cloud.gateway.filter.WeightCalculatorWebFilter]': info
+
+management:
+  server.port: 18080
+  endpoints.web:
+    exposure.include: '*'
+  endpoint.health:
+    show-details: always
+  health:
+    circuitbreakers.enabled: true
+  metrics.distribution.percentiles-histogram:
+    '[http.server.requests]': true
+  observations.key-values:
+    application: ${spring.application.name}
+  tracing:
+    sampling.probability: 1.0
+  otlp.tracing:
+    endpoint: http://localhost:4317
+    transport: grpc
 
 resilience4j:
-  circuitbreaker:
-    configs:
-      default:
-        register-health-indicator: true
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        permitted-number-of-calls-in-half-open-state: 3
-        wait-duration-in-open-state: 5s
-        automatic-transition-from-open-to-half-open-enabled: true
-  timelimiter:
-    configs:
-      default:
-        timeout-duration: 5s
-        cancel-running-future: true
+  circuitbreaker.configs:
+    default:
+      register-health-indicator: true
+      sliding-window-size: 10
+      minimum-number-of-calls: 5
+      permitted-number-of-calls-in-half-open-state: 3
+      wait-duration-in-open-state: 5s
+      automatic-transition-from-open-to-half-open-enabled: true
+  timelimiter.configs:
+    default:
+      timeout-duration: 5s
+      cancel-running-future: true

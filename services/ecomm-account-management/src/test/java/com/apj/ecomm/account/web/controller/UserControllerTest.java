@@ -41,8 +41,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@WebMvcTest(controllers = UserController.class, properties = { "docker.compose.lifecycle-management=start-and-stop",
-		"eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
+@WebMvcTest(controllers = UserController.class, properties = { "eureka.client.enabled=false",
+		"spring.cloud.config.enabled=false" })
 @AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
