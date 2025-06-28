@@ -1,12 +1,9 @@
 name: Build and Test Account Management Microservice
 
-env:
-  MS_NAME: ecomm-api-gateway
-
 on:
   push:
     paths:
-      - 'services/${{ env.MS_NAME }}/**'
+      - 'services/ecomm-api-gateway/**'
     branches-ignore: 
       - main
 
@@ -26,4 +23,4 @@ jobs:
         
     - name: Build with Maven
       run: mvn clean test
-      working-directory: services/${{ env.MS_NAME }}
+      working-directory: services/ecomm-api-gateway
