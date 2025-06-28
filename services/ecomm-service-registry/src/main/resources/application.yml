@@ -1,9 +1,10 @@
 spring:
   application:
     name: ecomm-service-registry
+  config:
+    import: 'optional:configserver:'
 
-server:
-  port: 8082
+server.port: 8082
 
 eureka:
   instance:
@@ -12,4 +13,8 @@ eureka:
     register-with-eureka: false
     fetch-registry: false
     service-url:
-      defaultZone: http://host.docker.internal:8082/eureka/ # Change host.docker.internal to localhost if running locally
+      defaultZone: http://localhost:8082/eureka/
+
+management:
+  endpoints.web:
+    exposure.include: '*'

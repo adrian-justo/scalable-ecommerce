@@ -1,16 +1,81 @@
+x-common-env: &common-env
+  SPRING_PROFILES_ACTIVE: docker
+  SPRING_RABBITMQ_HOST: ecomm-rabbitmq
+  SPRING_RABBITMQ_PORT: 5672
+  SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-guest}
+  SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-guest}
+  
+x-config-id: &config-id
+  SPRING_CLOUD_CONFIG_DISCOVERY_ENABLED: true
+  SPRING_CLOUD_CONFIG_DISCOVERY_SERVICEID: ecomm-config-server
+  
+x-config-retry: &config-retry
+  SPRING_CLOUD_CONFIG_FAILFAST: true
+  SPRING_CLOUD_CONFIG_RETRY_MAXATTEMPTS: 40
+  
+x-eureka: &eureka
+  EUREKA_SERVER: http://ecomm-service-registry:8082/eureka/
+  
+x-common-config: &common-config
+  restart: unless-stopped
+  networks: 
+    - ecomm-net
+  labels:
+    logging: "promtail"
+
 services:
-  account-management:
-#    build: ../services/ecomm-account-management # Use for local deployment
-    image: adrianjusto/ecomm-account-management
-    container_name: ecomm-account-management
+  api-gateway:
+#    build: ../services/ecomm-api-gateway # Use for local deployment
+    image: ${DOCKER_USERNAME}/ecomm-api-gateway
+    container_name: ecomm-api-gateway
     ports:
-      - "8083:8083"
-    restart: unless-stopped
+      - "18080:18080"
+      - "8080:8080"
+    environment:
+      <<: [*common-env, *config-id, *config-retry, *eureka]
+      MANAGEMENT_SERVER_PORT: 18080
+      SERVER_PORT: 8080
+      SPRING_CLOUD_CONFIG_NAME: ecomm-api-gateway,monitoring,security
     depends_on:
-      - account-postgres
       - service-registry
+    <<: *common-config
+      
+  config-server:
+    image: ${DOCKER_USERNAME}/ecomm-config-server
+    container_name: ecomm-config-server
+    ports: 
+      - "8081:8081"
+    environment:
+      <<: [*common-env, *eureka]
+      SERVER_PORT: 8081
+      GIT_URI: ${GIT_URI}
+      GIT_USERNAME: ${GIT_USERNAME}
+      GIT_PASSWORD: ${GIT_PASSWORD}
+    <<: *common-config
+      
+  service-registry:
+    image: ${DOCKER_USERNAME}/ecomm-service-registry
+    container_name: ecomm-service-registry
+    ports: 
+      - "8082:8082"
+    environment:
+      <<: [*common-env, *config-retry]
+      SERVER_PORT: 8082
+      SPRING_CLOUD_CONFIG_URI: http://ecomm-config-server:8081
+    depends_on:
+      - config-server
+    <<: *common-config
+  
+  account-management:
+    image: ${DOCKER_USERNAME}/ecomm-account-management
+    container_name: ecomm-account-management
+    ports: 
+      - "8083:8083"
+    environment:
+      <<: [*common-env, *config-id, *config-retry, *eureka]
+      SERVER_PORT: 8083
+      SPRING_CLOUD_CONFIG_NAME: ecomm-account-management,database,monitoring,security
+    depends_on:
       - api-gateway
-    networks:
-      - ecomm-net
-    labels:
-      logging: "promtail"
+      - account-postgres
+    <<: *common-config

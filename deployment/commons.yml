@@ -1,0 +1,9 @@
+name: scalable-ecomm-commons
+
+include:
+  - infrastructure.yml
+  - monitoring.yml
+
+networks:
+  ecomm-net:
+    external: true

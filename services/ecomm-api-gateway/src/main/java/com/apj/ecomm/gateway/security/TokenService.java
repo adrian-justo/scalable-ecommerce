@@ -19,7 +19,7 @@ import io.jsonwebtoken.security.Keys;
 @Component
 public class TokenService {
 
-	@Value("${secret.key}")
+	@Value("${secret.key:}")
 	private String secretKey;
 
 	public boolean isValid(String token) {

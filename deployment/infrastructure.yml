@@ -1,36 +1,23 @@
+x-common-config: &common-config
+  restart: unless-stopped
+  networks: 
+    - ecomm-net
+
 services:
-  api-gateway:
-    image: adrianjusto/ecomm-api-gateway
-    container_name: ecomm-api-gateway
-    ports:
-      - "8080:8080"
-    restart: unless-stopped
-    depends_on:
-      - service-registry
-    networks:
-      - ecomm-net
-    labels:
-      logging: "promtail"
-      
-  service-registry:
-    image: adrianjusto/ecomm-service-registry
-    container_name: ecomm-service-registry
-    ports:
-      - "8082:8082"
-    restart: unless-stopped
-    networks:
-      - ecomm-net
-    labels:
-      logging: "promtail"
-      
   pgadmin:
-    container_name: ecomm-pgadmin
     image: dpage/pgadmin4
+    container_name: ecomm-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: user@email.com
-      PGADMIN_DEFAULT_PASSWORD: pass
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-user@email.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-pass}
     ports:
       - 5431:80
-    networks:
-      - ecomm-net
-    restart: unless-stopped
+    <<: *common-config
+    
+  rabbitmq:
+    image: rabbitmq:management-alpine
+    container_name: ecomm-rabbitmq
+    ports:
+      - 15672:15672 # management UI
+      - 5672:5672
+    <<: *common-config

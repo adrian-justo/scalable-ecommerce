@@ -1,3 +1,8 @@
+x-common-config: &common-config
+  restart: unless-stopped
+  networks: 
+    - ecomm-net
+
 services:
   prometheus:
     image: prom/prometheus
@@ -7,8 +12,7 @@ services:
     volumes:
       - ./prometheus/config.yml:/etc/deployment/prometheus.yml:ro
     command: "--config.file=/etc/deployment/prometheus.yml"
-    networks:
-      - ecomm-net
+    <<: *common-config
       
   promtail:
     image: grafana/promtail
@@ -18,8 +22,7 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock
     command: "--config.file=/etc/deployment/promtail.yml"
-    networks:
-      - ecomm-net
+    <<: *common-config
       
   loki:
     image: grafana/loki
@@ -29,8 +32,7 @@ services:
     command: "-config.file=/etc/loki/local-config.yaml"
     depends_on:
       - promtail
-    networks:
-      - ecomm-net
+    <<: *common-config
       
   tempo:
     image: grafana/tempo
@@ -42,8 +44,7 @@ services:
     volumes:
       - ./tempo/config.yml:/etc/deployment/tempo.yml:ro
     command: "--config.file=/etc/deployment/tempo.yml"
-    networks:
-      - ecomm-net
+    <<: *common-config
             
   grafana:
     image: grafana/grafana
@@ -53,10 +54,9 @@ services:
     volumes:
       - ./grafana:/etc/grafana/provisioning/datasources:ro
     environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      GF_AUTH_ANONYMOUS_ENABLED: true
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: true
     depends_on:
       - tempo
-    networks:
-      - ecomm-net
+    <<: *common-config
