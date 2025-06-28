@@ -1,14 +1,14 @@
 name: Build and Push API Gateway
 
-env:
-  MS_NAME: ecomm-api-gateway
-
 on:
   pull_request:
     paths:
-      - 'services/${{ env.MS_NAME }}/**'
+      - 'services/ecomm-api-gateway/**'
     branches: 
       - main
+
+env:
+  MS_NAME: ecomm-api-gateway
 
 jobs:
   build-and-push:
