@@ -1,14 +1,14 @@
 name: Build and Push Account Management Microservice
 
-env:
-  MS_NAME: ecomm-account-management
-
 on:
   pull_request:
     paths:
-      - 'services/${{ env.MS_NAME }}/**'
+      - 'services/ecomm-account-management/**'
     branches: 
       - main
+
+env:
+  MS_NAME: ecomm-account-management
 
 jobs:
   build-and-push:
