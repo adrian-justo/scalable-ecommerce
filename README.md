@@ -2,7 +2,7 @@
 Requirements for this project can be found on this [link](https://roadmap.sh/projects/scalable-ecommerce-platform).
 
 ## Pre-requisites
-- Docker & Docker compose should be installed.
+- Docker & Docker compose must be installed.
   ```docker
   docker --version
   docker compose version
@@ -15,8 +15,8 @@ Requirements for this project can be found on this [link](https://roadmap.sh/pro
   - Navigate to `TokenService.java`.  
     Directory: services/ecomm-account-management/src/main/java/com/apj/ecomm/account/domain/
   - Run class as `Java Application` in your IDE.
-  - Copy the generated key.
-  - Provide the `SECRET_KEY` in `microservice.yml`.  
+    ![image](https://github.com/user-attachments/assets/bd726ec9-8163-4e03-a7a0-bf3b79c922e7)
+  - Copy the generated key and provide as `SECRET_KEY` in `microservice.yml`.  
     Directory: deployment/
     ```yaml
     SECRET_KEY: generatedKey
