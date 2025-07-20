@@ -1,7 +1,5 @@
 package com.apj.ecomm.account.web.controller;
 
-import java.util.Optional;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,7 +26,7 @@ public class AuthController {
 
 	@PostMapping("register")
 	@ResponseStatus(HttpStatus.CREATED)
-	public Optional<UserResponse> createUser(@RequestBody @Valid CreateUserRequest request) {
+	public UserResponse createUser(@RequestBody @Valid CreateUserRequest request) {
 		request.validate();
 		return service.register(request);
 	}

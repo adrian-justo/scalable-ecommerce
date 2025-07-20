@@ -9,7 +9,7 @@ import org.springframework.security.web.server.authorization.AuthorizationContex
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriTemplate;
 
-import com.apj.ecomm.gateway.security.model.UserResponse;
+import com.apj.ecomm.gateway.security.model.User;
 
 import reactor.core.publisher.Mono;
 
@@ -21,7 +21,7 @@ public class UserBasedRestriction implements ReactiveAuthorizationManager<Author
 	public AuthorizationDecision getDecision(Authentication authentication, AuthorizationContext context) {
 		Map<String, String> uriVariables = USERS_URI.match(context.getExchange().getRequest().getPath().value());
 		String requestUsername = uriVariables.get("username");
-		String tokenUsername = ((UserResponse) authentication.getPrincipal()).getUsername();
+		String tokenUsername = ((User) authentication.getPrincipal()).getUsername();
 		boolean hasAdminRole = authentication.getAuthorities().stream()
 				.anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
 		return new AuthorizationDecision(hasAdminRole || tokenUsername.equals(requestUsername));

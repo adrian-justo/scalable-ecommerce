@@ -1,9 +1,9 @@
 package com.apj.ecomm.account.web.controller;
 
 import java.util.List;
-import java.util.Optional;
 
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,14 +11,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.apj.ecomm.account.domain.IUserService;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
-import com.apj.ecomm.account.web.exception.UserNotFoundException;
+import com.apj.ecomm.account.web.controller.util.PathValidator;
 
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -38,21 +37,19 @@ public class UserController {
 	private final IUserService service;
 
 	@GetMapping
-	public List<UserResponse> getAllUsers(@RequestParam(defaultValue = "1") int pageNo,
-			@RequestParam(defaultValue = "10") int size) {
-		return service.findAll(pageNo, size);
+	public List<UserResponse> getAllUsers(@PageableDefault(page = 0, size = 10) Pageable pageable) {
+		return service.findAll(pageable);
 	}
 
 	@GetMapping("/{username}")
-	public Optional<UserResponse> getUserByUsername(@PathVariable String username) {
-		validate(username);
+	public UserResponse getUserByUsername(@PathVariable String username) {
+		PathValidator.username(username);
 		return service.findByUsername(username);
 	}
 
 	@PutMapping("/{username}")
-	public Optional<UserResponse> updateUser(@PathVariable String username,
-			@RequestBody @Valid UpdateUserRequest request) {
-		validate(username);
+	public UserResponse updateUser(@PathVariable String username, @RequestBody @Valid UpdateUserRequest request) {
+		PathValidator.username(username);
 		request.validate();
 		return service.update(username, request);
 	}
@@ -60,14 +57,8 @@ public class UserController {
 	@DeleteMapping("/{username}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void deleteById(@PathVariable String username) {
-		validate(username);
+		PathValidator.username(username);
 		service.deleteByUsername(username);
-	}
-
-	private void validate(String username) {
-		if (StringUtils.isBlank(username)) {
-			throw new UserNotFoundException();
-		}
 	}
 
 }

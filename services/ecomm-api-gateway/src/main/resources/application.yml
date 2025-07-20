@@ -7,12 +7,17 @@ paths:
     - /webjars/**
     - /actuator/**
     - /api/*/auth/**
+  getOnly:
+    - /api/*/products
+    - /api/*/products/**
+    - /api/*/products/*/stock
   adminOnly:
     - /api/*/users
   buyerOnly:
     - ''
   sellerOnly:
-    - ''
+    - /api/*/products
+    - /api/*/products/**
   nonSeller:
     - ''
   nonBuyer:
@@ -27,24 +32,52 @@ spring:
     context-propagation: auto
   config:
     import: 'optional:configserver:'
-  cloud.gateway.server.webflux.routes:
-    - id: Account Management Microservice
-      uri: lb://ECOMM-ACCOUNT-MANAGEMENT
-      predicates:
-        - Path=/api/*/users/**
-      filters:
-        - name: CircuitBreaker
-          args:
-            fallbackUri: forward:/fallback/account-management
-            
-    - id: Account Management Microservice - Authorization
-      uri: lb://ECOMM-ACCOUNT-MANAGEMENT
-      predicates:
-        - Path=/api/*/auth/**
-      filters:
-        - name: CircuitBreaker
-          args:
-            fallbackUri: forward:/fallback/account-management
+  data.redis:
+    host: localhost
+    port: 6379
+  cloud.gateway.server.webflux:
+    globalcors.cors-configurations:
+      '[/**]':
+        allowed-origins: '*'
+        allowedHeaders: '*'
+        allowedMethods: '*'
+    default-filters:
+      - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin, RETAIN_UNIQUE
+      - name: CircuitBreaker
+        args:
+          fallbackUri: forward:/fallback
+      - name: Retry
+        args:
+          retries: 3
+          statuses: REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, METHOD_NOT_ALLOWED
+          methods: GET, POST, PUT, DELETE
+          backoff:
+            firstBackoff: 1s
+            maxBackoff: 5s
+            factor: 2
+            basedOnPreviousValue: false
+      - name: RequestRateLimiter
+        args:
+          redis-rate-limiter:
+            replenishRate: 10
+            burstCapacity: 20
+            requestedTokens: 1
+          key-resolver: '#{@ipKeyResolver}'
+    routes:
+      - id: Account Management Microservice
+        uri: lb://ECOMM-ACCOUNT-MANAGEMENT
+        predicates:
+          - Path=/api/*/users/**
+              
+      - id: Account Management Microservice - Authorization
+        uri: lb://ECOMM-ACCOUNT-MANAGEMENT
+        predicates:
+          - Path=/api/*/auth/**
+              
+      - id: Product Catalog Microservice
+        uri: lb://ECOMM-PRODUCT-CATALOG
+        predicates:
+          - Path=/api/*/products/**
 
 server.port: 8080
 
@@ -55,10 +88,9 @@ eureka:
     defaultZone: ${EUREKA_SERVER:http://localhost:8082/eureka/}
 
 logging.level:
-  root: info
   '[org.springframework.cloud.gateway]': trace
-  '[org.springframework.cloud.gateway.route.RouteDefinitionLocator]': info
-  '[org.springframework.cloud.gateway.filter.WeightCalculatorWebFilter]': info
+  '[org.springframework.cloud.gateway.route]': info
+  '[org.springframework.cloud.gateway.filter]': info
 
 management:
   server.port: 18080

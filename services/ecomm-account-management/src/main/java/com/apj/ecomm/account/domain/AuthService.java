@@ -36,10 +36,10 @@ class AuthService implements IAuthService {
 	private final AuthenticationManager manager;
 	private final TokenService token;
 
-	public Optional<UserResponse> register(CreateUserRequest request) {
-		return Optional.of(getUserByEither(request.username(), request.email(), request.mobileNo())
+	public UserResponse register(CreateUserRequest request) {
+		return getUserByEither(request.username(), request.email(), request.mobileNo())
 				.map(existing -> saveUser(mapper.updateEntity(request, existing), request))
-				.orElseGet(() -> saveUser(mapper.toEntity(request), request)));
+				.orElseGet(() -> saveUser(mapper.toEntity(request), request));
 	}
 
 	private Optional<User> getUserByEither(String username, String email, String mobileNo) {

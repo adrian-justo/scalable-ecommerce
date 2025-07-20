@@ -6,14 +6,14 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.0</version>
+    <version>3.5.3</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>com.apj.ecomm</groupId>
   <artifactId>ecomm-api-gateway</artifactId>
   <version>1.0.0</version>
   <name>ecomm-api-gateway</name>
-  <description>API Gateway for Scalable E-Commerce Platform</description>
+  <description>API Gateway for Scalable E-Commerce Platform Project</description>
   <url />
   <licenses>
     <license />
@@ -31,8 +31,6 @@
     <java.version>21</java.version>
     <spring-cloud.version>2025.0.0</spring-cloud.version>
     <io.jsonwebtoken.version>0.12.6</io.jsonwebtoken.version>
-    <docker.image.name>
-      ${settings.docker.domain}/${settings.docker.username}/${project.artifactId}</docker.image.name>
   </properties>
 
   <dependencies>
@@ -112,6 +110,15 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springdoc</groupId>
+      <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+      <version>2.8.8</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter</artifactId>
     </dependency>
     <dependency>
@@ -136,20 +143,21 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <image>
-            <name>${docker.image.name}</name>
-            <builder>paketobuildpacks/builder-jammy-java-tiny</builder>
-          </image>
-          <docker>
-            <publishRegistry>
-              <username>${settings.docker.username}</username>
-              <password>${settings.docker.password}</password>
-              <url>https://${settings.docker.domain}</url>
-            </publishRegistry>
-          </docker>
           <excludes>
             <exclude>
               <groupId>org.projectlombok</groupId>
@@ -166,20 +174,30 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <configuration>
-          <annotationProcessorPaths>
-            <path>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-            </path>
-          </annotationProcessorPaths>
-        </configuration>
-      </plugin>
-      <plugin>
         <groupId>io.github.git-commit-id</groupId>
         <artifactId>git-commit-id-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <version>1.4.13</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <goals>
+              <goal>build</goal>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <useMavenSettingsForAuth>true</useMavenSettingsForAuth>
+          <repository>
+            ${settings.docker.domain}/${settings.docker.username}/${project.artifactId}</repository>
+          <buildArgs>
+            <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+          </buildArgs>
+        </configuration>
       </plugin>
     </plugins>
   </build>

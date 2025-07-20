@@ -1,0 +1,9 @@
+name: scalable-ecommerce
+
+include:
+  - applications.yml
+  - ../commons.yml
+
+networks:
+  ecomm-net:
+    external: true

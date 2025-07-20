@@ -27,5 +27,33 @@
       "SMS"
     ],
     "active": true
+  },
+  {
+    "username": "buyer001",
+    "email": "buyer001@mail.com",
+    "mobileNo": "+639087654321",
+    "password": "#buyeR01",
+    "name": "Buyer Name",
+    "roles": [
+      "BUYER"
+    ],
+    "notificationTypes": [
+      "EMAIL"
+    ]
+  },
+  {
+    "username": "seller001",
+    "email": "seller001@mail.com",
+    "mobileNo": "+639087654322",
+    "password": "#selleR01",
+    "name": "Seller Name",
+    "shopName": "Best Shop",
+    "address": "Block 1 Lot 2 Three St., Antipolo, Rizal, PH 1992",
+    "roles": [
+      "SELLER"
+    ],
+    "notificationTypes": [
+      "SMS"
+    ]
   }
 ]

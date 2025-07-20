@@ -14,8 +14,6 @@ interface UserMapper {
 
 	UserResponse toResponse(User user);
 
-	User toEntity(UserResponse response);
-
 	User toEntity(CreateUserRequest request);
 
 	User updateEntity(UpdateUserRequest updated, @MappingTarget User existing);

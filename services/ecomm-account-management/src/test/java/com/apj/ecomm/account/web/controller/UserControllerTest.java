@@ -2,7 +2,6 @@ package com.apj.ecomm.account.web.controller;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.times;
@@ -17,7 +16,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -72,7 +70,7 @@ class UserControllerTest {
 
 	@Test
 	void accountDetails_getAll() throws Exception {
-		when(service.findAll(anyInt(), anyInt())).thenReturn(response);
+		when(service.findAll(any())).thenReturn(response);
 		ResultActions action = mvc.perform(get(uri));
 
 		String jsonResponse = mapper.writeValueAsString(response);
@@ -84,7 +82,7 @@ class UserControllerTest {
 	void accountDetails_getSpecific() throws Exception {
 		UserResponse userResponse = response.get(0);
 
-		when(service.findByUsername(anyString())).thenReturn(Optional.of(userResponse));
+		when(service.findByUsername(anyString())).thenReturn(userResponse);
 		ResultActions action = mvc.perform(get(uri + "/admin123"));
 
 		String jsonResponse = mapper.writeValueAsString(userResponse);
@@ -101,7 +99,7 @@ class UserControllerTest {
 				user.password(), user.name(), user.shopName(), user.address(), user.roles(), user.notificationTypes(),
 				user.active());
 
-		when(service.update(anyString(), any())).thenReturn(Optional.of(userResponse));
+		when(service.update(anyString(), any())).thenReturn(userResponse);
 		ResultActions action = mvc.perform(
 				put(uri + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)));
 
@@ -127,6 +125,13 @@ class UserControllerTest {
 	void accountManagement_invalidRole() {
 		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
 				Set.of(Role.ADMIN, Role.BUYER), null);
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
+	}
+
+	@Test
+	void accountManagement_seller_noShopName() {
+		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+				Set.of(Role.SELLER), null);
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 

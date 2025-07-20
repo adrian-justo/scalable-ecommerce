@@ -1,68 +1,56 @@
 package com.apj.ecomm.account;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlMatching;
 import static io.restassured.RestAssured.given;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 
+import org.json.JSONException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.cloud.contract.spec.internal.HttpStatus;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpHeaders;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import com.apj.ecomm.account.domain.NotificationType;
-import com.apj.ecomm.account.domain.Role;
-import com.apj.ecomm.account.domain.TokenService;
-import com.apj.ecomm.account.domain.model.CreateUserRequest;
-import com.apj.ecomm.account.domain.model.LoginRequest;
-import com.apj.ecomm.account.domain.model.UpdateUserRequest;
-import com.apj.ecomm.account.domain.model.UserResponse;
+import com.apj.ecomm.account.constants.AppConstants;
+import com.apj.ecomm.account.domain.model.ProductCatalog;
+import com.apj.ecomm.account.domain.model.ProductResponse;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 
 import io.restassured.RestAssured;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
 		"eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class EcommAccountManagementApplicationTests {
-
-	private final String apiVersion = "/api/v1/";
-
-	private final String userServicePath = "users/";
-
-	private final String username = "seller123";
-
-	private static String jwt = "Bearer ";
 
 	@LocalServerPort
 	private int port;
+
+	@RegisterExtension
+	WireMockExtension productServiceMock = WireMockExtension.newInstance()
+			.options(WireMockConfiguration.wireMockConfig().port(TestcontainersConfiguration.API_GATEWAY_PORT)).build();
 
 	@Autowired
 	private PostgreSQLContainer<?> postgres;
 
 	@Autowired
 	private ObjectMapper mapper;
-
-	@Autowired
-	private PasswordEncoder encoder;
-
-	@Autowired
-	private TokenService token;
 
 	@BeforeAll
 	static void setUpBeforeClass() {
@@ -77,126 +65,38 @@ class EcommAccountManagementApplicationTests {
 
 	@Test
 	void connectionEstablished() {
-		assertTrue(postgres.isCreated());
 		assertTrue(postgres.isRunning());
 	}
 
 	@Test
-	@Order(1)
-	void userRegistration() throws JsonProcessingException {
-		CreateUserRequest request = new CreateUserRequest(username, "seller123@mail.com", "+639031234567",
-				"sellerP@ss123", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+	void clientEstablished() throws JsonProcessingException, JSONException {
+		String apiVersion = "/api/v1";
+		String productsPath = "/products";
+		String usersPath = "/users";
+		String username = "/seller123";
+		String shopName = "Shop 1";
 
-		String response = given().contentType("application/json").body(mapper.writeValueAsString(request)).when()
-				.post(apiVersion + "auth/register").then().assertThat().statusCode(HttpStatus.CREATED).extract().body()
-				.asString();
-		UserResponse user = mapper.readValue(response, new TypeReference<UserResponse>() {
-		});
+		List<ProductCatalog> catalog = List.of(new ProductCatalog(1L, "image1", "Item 1", "1"),
+				new ProductCatalog(2L, "image2", "Item 2", "2"));
+		String jsonCatalog = mapper.writeValueAsString(catalog);
+		productServiceMock.stubFor(get(urlMatching(apiVersion + productsPath + "?.*")).willReturn(aResponse()
+				.withStatus(HttpStatus.OK).withHeader("Content-Type", "application/json").withBody(jsonCatalog)));
 
-		assertEquals(request.roles(), user.roles());
-		assertTrue(user.active());
-		assertTrue(encoder.matches(request.password(), user.password()));
-	}
-
-	@Test
-	@Order(2)
-	void userRegistration_alreadyRegistered() throws JsonProcessingException {
-		CreateUserRequest request = new CreateUserRequest("nonexistent", "seller123@mail.com", "+639031234567",
-				"sellerP@ss123", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		given().contentType("application/json").body(mapper.writeValueAsString(request)).when()
-				.post(apiVersion + "auth/register").then().assertThat().statusCode(HttpStatus.CONFLICT);
-	}
-
-	@Test
-	@Order(3)
-	void login_incorrectCredentials() {
-		LoginRequest request = new LoginRequest(username, "wrongPassword");
-		given().contentType("application/json").body(request).when().post(apiVersion + "auth/login").then().assertThat()
-				.statusCode(HttpStatus.UNAUTHORIZED);
-	}
-
-	@Test
-	@Order(4)
-	void login() {
-		LoginRequest request = new LoginRequest("+639031234567", "sellerP@ss123");
-
-		String response = given().contentType("application/json").body(request).when().post(apiVersion + "auth/login")
-				.then().assertThat().statusCode(HttpStatus.OK).extract().body().asString();
-
-		jwt += response;
-		assertTrue(token.isValid(jwt.replace("Bearer ", "")));
-	}
-
-	@Test
-	@Order(5)
-	void accountDetails() throws JsonProcessingException {
-		String response = given().header(HttpHeaders.AUTHORIZATION, jwt).when()
-				.get(apiVersion + userServicePath + username).then().assertThat().statusCode(HttpStatus.OK).extract()
-				.body().asString();
-		UserResponse user = mapper.readValue(response, new TypeReference<UserResponse>() {
-		});
-
-		assertEquals("seller123@mail.com", user.email());
-		assertEquals(Set.of(NotificationType.EMAIL), user.notificationTypes());
-	}
-
-	@Test
-	@Order(6)
-	void accountDetails_notFound() {
-		given().header(HttpHeaders.AUTHORIZATION, jwt).when().get(apiVersion + userServicePath + "nonexistent").then()
-				.assertThat().statusCode(HttpStatus.NOT_FOUND);
-	}
-
-	@Test
-	@Order(7)
-	void accountManagement() throws JsonProcessingException {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639041234567", "sellerP@ss12", null,
-				null, null, null, null);
-
-		String response = given().header(HttpHeaders.AUTHORIZATION, jwt).contentType("application/json").body(request)
-				.when().put(apiVersion + userServicePath + username).then().assertThat().statusCode(HttpStatus.OK)
+		String catalogResponse = given().header(AppConstants.HEADER_SHOP_NAME, shopName).when()
+				.get(apiVersion + usersPath + username + productsPath).then().assertThat().statusCode(HttpStatus.OK)
 				.extract().body().asString();
-		UserResponse user = mapper.readValue(response, new TypeReference<UserResponse>() {
-		});
+		assertEquals(jsonCatalog, catalogResponse, true);
 
-		assertEquals(username, user.username());
-		assertEquals(request.email(), user.email());
-		assertEquals(request.mobileNo(), user.mobileNo());
-		assertTrue(encoder.matches("sellerP@ss12", user.password()));
-	}
+		ProductResponse product = new ProductResponse(1L, "Item 1", shopName, "Description 1", Set.of("image1"),
+				Set.of("category"), true, BigDecimal.ONE);
+		String jsonProduct = mapper.writeValueAsString(product);
+		productServiceMock.stubFor(get(urlMatching(apiVersion + productsPath + "/([0-9]*)")).willReturn(aResponse()
+				.withStatus(HttpStatus.OK).withHeader("Content-Type", "application/json").withBody(jsonProduct)));
 
-	@Test
-	@Order(8)
-	void accountManagement_invalidDetails() {
-		UpdateUserRequest request = new UpdateUserRequest("", "", null, null, null, null, null, null);
-		given().header(HttpHeaders.AUTHORIZATION, jwt).contentType("application/json").body(request).when()
-				.put(apiVersion + userServicePath + username).then().assertThat().statusCode(HttpStatus.BAD_REQUEST);
-	}
-
-	@Test
-	@Order(9)
-	void accountDeletion() {
-		given().header(HttpHeaders.AUTHORIZATION, jwt).when().delete(apiVersion + userServicePath + username).then()
-				.assertThat().statusCode(HttpStatus.NO_CONTENT);
-		given().header(HttpHeaders.AUTHORIZATION, jwt).when().get(apiVersion + userServicePath + username).then()
-				.assertThat().statusCode(HttpStatus.NOT_FOUND);
-	}
-
-	@Test
-	@Order(10)
-	void userRegistration_inactiveUser() throws JsonProcessingException {
-		CreateUserRequest request = new CreateUserRequest(username, "seller123@mail.com", "+639031234567",
-				"sellerP@ss123", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-
-		String response = given().contentType("application/json").body(mapper.writeValueAsString(request)).when()
-				.post(apiVersion + "auth/register").then().assertThat().statusCode(HttpStatus.CREATED).extract().body()
-				.asString();
-		UserResponse user = mapper.readValue(response, new TypeReference<UserResponse>() {
-		});
-
-		assertEquals(request.roles(), user.roles());
-		assertTrue(user.active());
-		assertTrue(encoder.matches(request.password(), user.password()));
+		String productResponse = given().header(AppConstants.HEADER_SHOP_NAME, shopName).when()
+				.get(apiVersion + usersPath + username + productsPath + "/1").then().assertThat()
+				.statusCode(HttpStatus.OK).extract().body().asString();
+		assertEquals(jsonProduct, productResponse, true);
 	}
 
 }

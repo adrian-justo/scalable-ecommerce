@@ -9,7 +9,7 @@ import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.apj.ecomm.gateway.security.model.UserResponse;
+import com.apj.ecomm.gateway.security.model.User;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -39,9 +39,10 @@ public class TokenService {
 		return Date.from(Instant.now()).before(expiration);
 	}
 
-	public UserResponse getUser(String token) {
+	public User getUser(String token) {
 		Claims claims = getPayload(token);
-		return UserResponse.builder().username(claims.getSubject()).roles((List<String>) claims.get("roles")).build();
+		return User.builder().username(claims.getSubject()).roles((List<String>) claims.get("roles"))
+				.shopName((String) claims.get("shopName")).build();
 	}
 
 }
