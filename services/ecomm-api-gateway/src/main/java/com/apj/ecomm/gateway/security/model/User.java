@@ -12,13 +12,14 @@ import lombok.Data;
 
 @Data
 @Builder
-public class UserResponse implements UserDetails {
+public class User implements UserDetails {
 
 	private static final long serialVersionUID = -8563495116816209640L;
 
 	private String username;
 	private String password;
 	private List<String> roles;
+	private String shopName;
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {

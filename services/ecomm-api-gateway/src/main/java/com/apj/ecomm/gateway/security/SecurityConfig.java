@@ -2,8 +2,10 @@ package com.apj.ecomm.gateway.security;
 
 import java.util.List;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebFluxSecurity
+@EnableConfigurationProperties(Paths.class)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -31,8 +34,10 @@ public class SecurityConfig {
 		return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
 				.exceptionHandling(e -> e.authenticationEntryPoint(authEntryPoint))
 				.authorizeExchange(authorizeExchangeSpec -> authorizeExchangeSpec
-						.pathMatchers(convert(paths.permitted())).permitAll().pathMatchers(convert(paths.adminOnly()))
-						.hasRole(Role.ADMIN.name()).pathMatchers(convert(paths.buyerOnly())).hasRole(Role.BUYER.name())
+						.pathMatchers(convert(paths.permitted())).permitAll()
+						.pathMatchers(HttpMethod.GET, convert(paths.getOnly())).permitAll()
+						.pathMatchers(convert(paths.adminOnly())).hasRole(Role.ADMIN.name())
+						.pathMatchers(convert(paths.buyerOnly())).hasRole(Role.BUYER.name())
 						.pathMatchers(convert(paths.sellerOnly())).hasRole(Role.SELLER.name())
 						.pathMatchers(convert(paths.nonSeller())).hasAnyRole(Role.ADMIN.name(), Role.BUYER.name())
 						.pathMatchers(convert(paths.nonBuyer())).hasAnyRole(Role.ADMIN.name(), Role.SELLER.name())

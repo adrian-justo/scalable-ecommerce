@@ -1,7 +1,7 @@
 name: scalable-ecomm-apps
 
 include:
-  - ../services/ecomm-account-management/database.yml
+  - databases.yml
   - microservice.yml
 
 networks:

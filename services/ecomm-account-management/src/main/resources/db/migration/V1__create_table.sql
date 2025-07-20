@@ -1,5 +1,5 @@
 create table users (
-    id uuid not null,
+    id uuid primary key,
     username varchar(255) not null unique,
     email varchar(255) unique,
     mobile_no varchar(255) unique,
@@ -11,6 +11,5 @@ create table users (
     notification_types varchar(255) array,
     created_at timestamp(6) with time zone,
     updated_at timestamp(6) with time zone,
-    active boolean default true,
-    primary key (id)
+    active boolean default true
 );

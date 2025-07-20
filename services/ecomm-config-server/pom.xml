@@ -6,14 +6,14 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.0</version>
+    <version>3.5.3</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>com.apj.ecomm</groupId>
   <artifactId>ecomm-config-server</artifactId>
   <version>1.0.0</version>
   <name>ecomm-config-server</name>
-  <description>Config Server for Scalable E-Commerce Platform</description>
+  <description>Config Server for Scalable E-Commerce Platform Project</description>
   <url />
   <licenses>
     <license />
@@ -30,8 +30,6 @@
   <properties>
     <java.version>21</java.version>
     <spring-cloud.version>2025.0.0</spring-cloud.version>
-    <docker.image.name>
-      ${settings.docker.domain}/${settings.docker.username}/${project.artifactId}</docker.image.name>
   </properties>
 
   <dependencies>
@@ -79,18 +77,38 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>build-info</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.github.git-commit-id</groupId>
+        <artifactId>git-commit-id-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <version>1.4.13</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <goals>
+              <goal>build</goal>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
         <configuration>
-          <image>
-            <name>${docker.image.name}</name>
-            <builder>paketobuildpacks/builder-jammy-java-tiny</builder>
-          </image>
-          <docker>
-            <publishRegistry>
-              <username>${settings.docker.username}</username>
-              <password>${settings.docker.password}</password>
-              <url>https://${settings.docker.domain}</url>
-            </publishRegistry>
-          </docker>
+          <useMavenSettingsForAuth>true</useMavenSettingsForAuth>
+          <repository>
+            ${settings.docker.domain}/${settings.docker.username}/${project.artifactId}</repository>
+          <buildArgs>
+            <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+          </buildArgs>
         </configuration>
       </plugin>
     </plugins>

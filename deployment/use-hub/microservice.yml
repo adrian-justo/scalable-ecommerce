@@ -11,10 +11,14 @@ x-config-id: &config-id
   
 x-config-retry: &config-retry
   SPRING_CLOUD_CONFIG_FAILFAST: true
-  SPRING_CLOUD_CONFIG_RETRY_MAXATTEMPTS: 40
+  SPRING_CLOUD_CONFIG_RETRY_MAXATTEMPTS: 10
   
 x-eureka: &eureka
   EUREKA_SERVER: http://ecomm-service-registry:8082/eureka/
+
+x-redis: &redis
+  SPRING_DATA_REDIS_HOST: ecomm-redis
+  SPRING_DATA_REDIS_PORT: 6379
 
 x-jwt: &jwt
   SECRET_KEY: ${SECRET_KEY:-gEn3r8EdK3y} # Generate key in Account Management TokenService class
@@ -25,6 +29,14 @@ x-common-config: &common-config
     - ecomm-net
   labels:
     logging: "promtail"
+    
+x-health-chk: &health-chk
+  healthcheck:
+    test: ["CMD-SHELL", "curl --fail --silent http://localhost:$${SERVER_PORT}/actuator/health | grep UP || exit 1"]
+    interval: 20s
+    timeout: 10s
+    retries: 10
+    start_period: 1m
 
 services:
   api-gateway:
@@ -34,12 +46,19 @@ services:
       - "18080:18080"
       - "8080:8080"
     environment:
-      <<: [*common-env, *config-id, *config-retry, *eureka, *jwt]
+      <<: [*common-env, *config-id, *config-retry, *eureka, *redis, *jwt]
       MANAGEMENT_SERVER_PORT: 18080
       SERVER_PORT: 8080
       SPRING_CLOUD_CONFIG_NAME: ecomm-api-gateway,monitoring
     depends_on:
-      - service-registry
+      service-registry:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:$${MANAGEMENT_SERVER_PORT}/actuator/health | grep UP || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 1m
     <<: *common-config
 
   config-server:
@@ -53,7 +72,7 @@ services:
       GIT_URI: ${GIT_URI}
       GIT_USERNAME: ${GIT_USERNAME}
       GIT_PASSWORD: ${GIT_PASSWORD}
-    <<: *common-config
+    <<: [*common-config, *health-chk]
 
   service-registry:
     image: ${DOCKER_USERNAME}/ecomm-service-registry
@@ -65,8 +84,9 @@ services:
       SERVER_PORT: 8082
       SPRING_CLOUD_CONFIG_URI: http://ecomm-config-server:8081
     depends_on:
-      - config-server
-    <<: *common-config
+      config-server:
+        condition: service_healthy      
+    <<: [*common-config, *health-chk]
 
   account-management:
     image: ${DOCKER_USERNAME}/ecomm-account-management
@@ -79,6 +99,25 @@ services:
       SPRING_CLOUD_CONFIG_NAME: database,monitoring
       SPRING_DATASOURCE_URL: jdbc:postgresql://account-postgres:5432/users_db
     depends_on:
-      - api-gateway
-      - account-postgres
-    <<: *common-config
+      api-gateway:
+        condition: service_healthy
+      account-postgres:
+        condition: service_healthy
+    <<: [*common-config, *health-chk]
+
+  product-catalog:
+    image: ${DOCKER_USERNAME}/ecomm-product-catalog
+    container_name: ecomm-product-catalog
+    ports: 
+      - "8084:8084"
+    environment:
+      <<: [*common-env, *config-id, *config-retry, *eureka, *redis]
+      SERVER_PORT: 8084
+      SPRING_CLOUD_CONFIG_NAME: database,monitoring
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-postgres:5432/products_db
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      product-postgres:
+        condition: service_healthy
+    <<: [*common-config, *health-chk]

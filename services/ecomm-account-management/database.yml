@@ -8,6 +8,11 @@ services:
       POSTGRES_PASSWORD: ${ACCOUNT_PG_PASSWORD:-pass}
     ports:
       - 5432:5432
+    restart: unless-stopped
     networks:
       - ecomm-net
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

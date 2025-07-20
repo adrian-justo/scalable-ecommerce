@@ -13,6 +13,10 @@ x-config-disable: &config-disable
 x-eureka: &eureka
   EUREKA_SERVER: http://ecomm-service-registry:8082/eureka/
 
+x-redis: &redis
+  SPRING_DATA_REDIS_HOST: ecomm-redis
+  SPRING_DATA_REDIS_PORT: 6379
+
 x-jwt: &jwt
   SECRET_KEY: ${SECRET_KEY:-gEn3r8EdK3y} # Generate key in Account Management TokenService class
 
@@ -31,7 +35,7 @@ services:
       - "18080:18080"
       - "8080:8080"
     environment:
-      <<: [*common-env, *config-disable, *eureka, *jwt]
+      <<: [*common-env, *config-disable, *eureka, *redis, *jwt]
       MANAGEMENT_SERVER_PORT: 18080
       SERVER_PORT: 8080
     depends_on:
@@ -48,9 +52,6 @@ services:
       SERVER_PORT: 8081
       SPRING_CLOUD_BUS_ENABLED: false
       SPRING_CLOUD_CONFIG_SERVER_ENABLED: false
-      GIT_URI: ${GIT_URI}
-      GIT_USERNAME: ${GIT_USERNAME}
-      GIT_PASSWORD: ${GIT_PASSWORD}
     <<: *common-config
 
   service-registry:
@@ -77,4 +78,18 @@ services:
     depends_on:
       - api-gateway
       - account-postgres
+    <<: *common-config
+
+  product-catalog:
+    build: ../services/ecomm-product-catalog
+    container_name: ecomm-product-catalog
+    ports: 
+      - "8084:8084"
+    environment:
+      <<: [*common-env, *config-disable, *eureka, *redis]
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-postgres:5432/products_db
+    depends_on:
+      - api-gateway
+      - product-postgres
     <<: *common-config

@@ -1,17 +1,25 @@
 package com.apj.ecomm.gateway;
 
+import java.util.Objects;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.gateway.filter.ratelimit.KeyResolver;
+import org.springframework.context.annotation.Bean;
 
-import com.apj.ecomm.gateway.constants.Paths;
+import reactor.core.publisher.Mono;
 
 @SpringBootApplication
-@EnableConfigurationProperties(Paths.class)
 public class EcommApiGatewayApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(EcommApiGatewayApplication.class, args);
+	}
+
+	@Bean
+	KeyResolver ipKeyResolver() {
+		return exchange -> Mono
+				.just(Objects.requireNonNull(exchange.getRequest().getRemoteAddress()).getAddress().getHostAddress());
 	}
 
 }

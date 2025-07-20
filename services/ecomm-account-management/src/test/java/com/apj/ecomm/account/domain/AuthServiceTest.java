@@ -27,7 +27,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
-import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -36,7 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-	private List<UserResponse> response;
+	private List<User> users;
 
 	@Mock
 	private UserRepository repository;
@@ -61,7 +60,7 @@ class AuthServiceTest {
 		ObjectMapper objMap = new ObjectMapper();
 		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (InputStream inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = objMap.readValue(inputStream, new TypeReference<List<UserResponse>>() {
+			users = objMap.readValue(inputStream, new TypeReference<List<User>>() {
 			});
 		}
 	}
@@ -69,25 +68,24 @@ class AuthServiceTest {
 	@Test
 	void register_success() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		User user = mapper.toEntity(request);
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
 				.thenReturn(Optional.empty());
 		when(repository.save(any())).thenReturn(user);
 
-		assertEquals(Optional.of(mapper.toResponse(user)), service.register(request));
+		assertEquals(mapper.toResponse(user), service.register(request));
 	}
 
 	@Test
 	void register_alreadyRegistered() {
-		UserResponse user = response.get(1);
-		CreateUserRequest request = new CreateUserRequest(user.username(), user.email(), user.mobileNo(),
-				user.password(), user.name(), user.roles(), user.notificationTypes());
-		User existing = mapper.toEntity(request);
+		User user = users.get(1);
+		CreateUserRequest request = new CreateUserRequest(user.getUsername(), user.getEmail(), user.getMobileNo(),
+				user.getPassword(), user.getName(), user.getShopName(), user.getRoles(), user.getNotificationTypes());
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
-				.thenReturn(Optional.of(existing));
+				.thenReturn(Optional.of(user));
 
 		assertThrows(AlreadyRegisteredException.class, () -> service.register(request));
 	}
@@ -95,7 +93,7 @@ class AuthServiceTest {
 	@Test
 	void getValidatedTypes_emailOnlyNotif_hasMobile() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
 		assertEquals(Set.of(NotificationType.EMAIL), types);
 	}
@@ -103,7 +101,7 @@ class AuthServiceTest {
 	@Test
 	void getValidatedTypes_smsOnlyNotif_hasEmail() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
+				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
 		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
 		assertEquals(Set.of(NotificationType.SMS), types);
 	}
@@ -111,7 +109,7 @@ class AuthServiceTest {
 	@Test
 	void getValidatedTypes_emailOnlyNotif_noEmail() {
 		CreateUserRequest request = new CreateUserRequest("seller123", null, "+639031234567", "$elL3r12", "Seller Name",
-				Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+				"Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
 		assertEquals(Set.of(NotificationType.SMS), types);
 	}
@@ -119,7 +117,7 @@ class AuthServiceTest {
 	@Test
 	void getValidatedTypes_smsOnlyNotif_noMobile() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", null, "$elL3r12",
-				"Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
+				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
 		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
 		assertEquals(Set.of(NotificationType.EMAIL), types);
 	}
@@ -127,7 +125,8 @@ class AuthServiceTest {
 	@Test
 	void getValidatedTypes_emailSmsNotif_noMobile() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", null, "$elL3r12",
-				"Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.SMS, NotificationType.EMAIL));
+				"Seller Name", "Seller's Shop", Set.of(Role.SELLER),
+				Set.of(NotificationType.SMS, NotificationType.EMAIL));
 		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
 		assertEquals(Set.of(NotificationType.EMAIL), types);
 	}
@@ -135,7 +134,7 @@ class AuthServiceTest {
 	@Test
 	void getValidatedTypes_emailSmsNotif_noEmail() {
 		CreateUserRequest request = new CreateUserRequest("seller123", null, "+639031234567", "$elL3r12", "Seller Name",
-				Set.of(Role.SELLER), Set.of(NotificationType.SMS, NotificationType.EMAIL));
+				"Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.SMS, NotificationType.EMAIL));
 		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
 		assertEquals(Set.of(NotificationType.SMS), types);
 	}
@@ -143,16 +142,15 @@ class AuthServiceTest {
 	@Test
 	void getValidatedTypes_nullNotif_hasEmailMobile() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", Set.of(Role.SELLER), null);
+				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), null);
 		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
 		assertEquals(Set.of(NotificationType.EMAIL), types);
 	}
 
 	@Test
 	void login_success() {
-		UserResponse existing = response.get(0);
-		LoginRequest request = new LoginRequest(existing.email(), existing.password());
-		User user = mapper.toEntity(existing);
+		User user = users.get(0);
+		LoginRequest request = new LoginRequest(user.getEmail(), user.getPassword());
 
 		when(manager.authenticate(any()))
 				.thenReturn(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));

@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.io.InputStream;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -67,11 +66,11 @@ class AuthControllerTest {
 	@Test
 	void userRegistration_success() throws Exception {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		UserResponse userResponse = new UserResponse(request.username(), request.email(), request.mobileNo(),
 				request.password(), request.name(), "", "", request.roles(), request.notificationTypes(), true);
 
-		when(service.register(any())).thenReturn(Optional.of(userResponse));
+		when(service.register(any())).thenReturn(userResponse);
 		ResultActions action = mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request)));
 
@@ -82,7 +81,7 @@ class AuthControllerTest {
 
 	@Test
 	void userRegistration_invalidDetails() throws Exception {
-		CreateUserRequest request = new CreateUserRequest("", "", "", "", "", null, null);
+		CreateUserRequest request = new CreateUserRequest("", "", "", "", "", "", null, null);
 		mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
 				.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
 	}
@@ -90,21 +89,29 @@ class AuthControllerTest {
 	@Test
 	void userRegistration_emailSmsMissing() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "", "", "$elL3r12", "Seller Name",
-				Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+				"Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void userRegistration_invalidRole() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", Set.of(Role.ADMIN, Role.SELLER), Set.of(NotificationType.EMAIL));
+				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.ADMIN, Role.SELLER),
+				Set.of(NotificationType.EMAIL));
+		assertThrows(RequestArgumentNotValidException.class, request::validate);
+	}
+
+	@Test
+	void userRegistration_seller_noShopName() {
+		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
+				"$elL3r12", "Seller Name", "", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void userRegistration_invalidNotificationType() {
 		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", Set.of(Role.SELLER), Set.of());
+				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of());
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 

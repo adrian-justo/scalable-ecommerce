@@ -13,11 +13,18 @@ services:
     ports:
       - 5431:80
     <<: *common-config
-    
+
   rabbitmq:
     image: rabbitmq:management-alpine
     container_name: ecomm-rabbitmq
     ports:
       - 15672:15672 # management UI
       - 5672:5672
+    <<: *common-config
+
+  redis:
+    image: redis:alpine
+    container_name: ecomm-redis
+    ports:
+      - 6379:6379
     <<: *common-config

@@ -13,15 +13,23 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import com.apj.ecomm.account.web.messaging.TokenInterceptor;
+
+import feign.RequestInterceptor;
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.aop.ObservedAspect;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
 @RequiredArgsConstructor
-class AppConfig {
+public class AppConfig {
 
 	private final UserDetailsService userDetailsService;
+
+	@Bean
+	RequestInterceptor tokenInterceptor() {
+		return new TokenInterceptor();
+	}
 
 	@Bean
 	ObservedAspect observedAspect(ObservationRegistry observationRegistry) {

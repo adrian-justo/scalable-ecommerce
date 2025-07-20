@@ -14,5 +14,5 @@ public final class AppConstants {
 	public static final String MSG_IDENTIFIER_BLANK = "Please input your registered username, email, or mobile number";
 	public static final String MSG_EMAIL_MOBILE_BLANK = "Please provide at least one of email or mobile number";
 	public static final String MSG_SET_INVALID = "Set provided must not be empty and only contain valid values";
-
+	public static final String HEADER_SHOP_NAME = "ecomm-shop-name";
 }

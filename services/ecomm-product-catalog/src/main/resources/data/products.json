@@ -1,0 +1,57 @@
+[
+  {
+    "name": "Essence Mascara Lash Princess",
+    "shopName": "Shop Name",
+    "description": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
+    "images": [
+      "https://placehold.co/600x400"
+    ],
+    "categories": [
+      "beauty",
+      "mascara"
+    ],
+    "stock": 99,
+    "price": 9
+  },
+  {
+    "name": "Chanel Coco Noir Eau De",
+    "shopName": "Best Shop",
+    "description": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
+    "images": [
+      "https://placehold.co/400",
+      "https://placehold.co/600x400"
+    ],
+    "categories": [
+      "fragrances",
+      "perfumes"
+    ],
+    "stock": 58,
+    "price": 129.99
+  },
+  {
+    "name": "Yellow Peeler",
+    "shopName": "Best Shop",
+    "description": "The Yellow Peeler is a handy tool for peeling fruits and vegetables with ease. Its bright yellow color adds a cheerful touch to your kitchen gadgets.",
+    "images": [
+      "https://placehold.co/300"
+    ],
+    "categories": [
+      "kitchen tools",
+      "peelers"
+    ]
+  },
+  {
+    "name": "Apple Airpods",
+    "shopName": "Shop Name",
+    "description": "The Apple Airpods offer a seamless wireless audio experience. With easy pairing, high-quality sound, and Siri integration, they are perfect for on-the-go listening.",
+    "images": [
+      "https://placehold.co/500"
+    ],
+    "categories": [
+      "electronics",
+      "wireless earphones"
+    ],
+    "stock": 59,
+    "price": 129.99
+    }
+]

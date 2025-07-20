@@ -1,0 +1,18 @@
+services:
+  product-postgres:
+    image: postgres
+    container_name: product-postgres
+    environment:
+      POSTGRES_DB: products_db
+      POSTGRES_USER: ${ACCOUNT_PG_USER:-user}
+      POSTGRES_PASSWORD: ${ACCOUNT_PG_PASSWORD:-pass}
+    ports:
+      - 5433:5432
+    restart: unless-stopped
+    networks:
+      - ecomm-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

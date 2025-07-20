@@ -6,7 +6,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.5.0</version>
+    <version>3.5.3</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
   <groupId>com.apj.ecomm</groupId>
@@ -33,8 +33,6 @@
     <spring-cloud.version>2025.0.0</spring-cloud.version>
     <org.mapstruct.version>1.6.3</org.mapstruct.version>
     <io.jsonwebtoken.version>0.12.6</io.jsonwebtoken.version>
-    <docker.image.name>
-      ${settings.docker.domain}/${settings.docker.username}/${project.artifactId}</docker.image.name>
   </properties>
 
   <dependencies>
@@ -177,6 +175,10 @@
       <version>${io.jsonwebtoken.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-openfeign</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
     </dependency>
@@ -227,17 +229,6 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <image>
-            <name>${docker.image.name}</name>
-            <builder>paketobuildpacks/builder-jammy-java-tiny</builder>
-          </image>
-          <docker>
-            <publishRegistry>
-              <username>${settings.docker.username}</username>
-              <password>${settings.docker.password}</password>
-              <url>https://${settings.docker.domain}</url>
-            </publishRegistry>
-          </docker>
           <excludes>
             <exclude>
               <groupId>org.projectlombok</groupId>
@@ -256,6 +247,28 @@
       <plugin>
         <groupId>io.github.git-commit-id</groupId>
         <artifactId>git-commit-id-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.spotify</groupId>
+        <artifactId>dockerfile-maven-plugin</artifactId>
+        <version>1.4.13</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <goals>
+              <goal>build</goal>
+              <goal>push</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <useMavenSettingsForAuth>true</useMavenSettingsForAuth>
+          <repository>
+            ${settings.docker.domain}/${settings.docker.username}/${project.artifactId}</repository>
+          <buildArgs>
+            <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+          </buildArgs>
+        </configuration>
       </plugin>
     </plugins>
   </build>

@@ -1,18 +1,19 @@
 package com.apj.ecomm.account.domain;
 
 import java.util.List;
-import java.util.Optional;
+
+import org.springframework.data.domain.Pageable;
 
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 
 public interface IUserService {
 
-	List<UserResponse> findAll(int pageNo, int size);
+	List<UserResponse> findAll(Pageable pageable);
 
-	Optional<UserResponse> findByUsername(String username);
+	UserResponse findByUsername(String username);
 
-	Optional<UserResponse> update(String username, UpdateUserRequest request);
+	UserResponse update(String username, UpdateUserRequest request);
 
 	void deleteByUsername(String username);
 

@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AlreadyRegisteredException extends RuntimeException {
 
+	private static final long serialVersionUID = -1569155018141774214L;
+
 	private final Map<String, List<String>> errors;
 
 	public Map<String, List<String>> getErrors() {

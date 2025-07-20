@@ -1,0 +1,7 @@
+include:
+  - ../services/ecomm-account-management/database.yml
+  - ../services/ecomm-product-catalog/database.yml
+
+networks:
+  ecomm-net:
+    external: true

@@ -35,6 +35,9 @@ public class TokenService {
 	public String generate(User user) {
 		Map<String, Object> claims = new HashMap<>();
 		claims.put("roles", user.getRoles());
+		claims.put("shopName", user.getShopName());
+		// Any other claims to be used as request header must also be added in
+		// AuthFilter class of API Gateway
 		return Jwts.builder().claims(claims).subject(user.getUsername()).issuedAt(Date.from(Instant.now()))
 				.expiration(Date.from(Instant.now().plus(Duration.ofMinutes(30))))
 				.signWith(getSignKey(), Jwts.SIG.HS256).compact();
@@ -42,14 +45,24 @@ public class TokenService {
 
 	private SecretKey getSignKey() {
 		if (StringUtils.isBlank(secretKey)) {
-			byte[] keyBytes = new byte[32];
-			new SecureRandom().nextBytes(keyBytes);
-			secretKey = Base64.getEncoder().encodeToString(keyBytes);
+			secretKey = generateSecret();
 			log.warn("Secret key is not configured, generated a random key: {}", secretKey);
-			log.warn(
-					"To enable JWT signing, configure this key in your API Gateway and ensure it matches the key used in the Auth Service.");
+			log.warn("To enable JWT signing, configure this key in your API Gateway"
+					+ " and ensure it matches the key used in the Auth Service.");
 		}
 		return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+	}
+
+	private static String generateSecret() {
+		byte[] keyBytes = new byte[32];
+		new SecureRandom().nextBytes(keyBytes);
+		return Base64.getEncoder().encodeToString(keyBytes);
+	}
+
+	// To generate a secret key for configuration,
+	// run this class as Java app. in your IDE
+	public static void main(String[] args) {
+		System.out.println(TokenService.generateSecret());
 	}
 
 	public boolean isValid(String token) {

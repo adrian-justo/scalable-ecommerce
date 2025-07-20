@@ -8,9 +8,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
-import com.apj.ecomm.account.web.exception.UserNotFoundException;
+import com.apj.ecomm.account.web.exception.ResourceNotFoundException;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -34,19 +32,19 @@ class UserService implements IUserService {
 	private final PasswordEncoder encoder;
 
 	@Transactional(readOnly = true)
-	public List<UserResponse> findAll(int pageNo, int size) {
-		Pageable pageable = PageRequest.of(pageNo - 1, size, Sort.by("id").ascending());
+	public List<UserResponse> findAll(Pageable pageable) {
 		return repository.findAll(pageable).stream().map(mapper::toResponse).toList();
 	}
 
 	@Transactional(readOnly = true)
-	public Optional<UserResponse> findByUsername(String username) {
-		return findBy(username).map(mapper::toResponse);
+	public UserResponse findByUsername(String username) {
+		return findByActive(username).map(mapper::toResponse).orElseThrow(ResourceNotFoundException::new);
 	}
 
-	public Optional<UserResponse> update(String username, UpdateUserRequest request) {
+	public UserResponse update(String username, UpdateUserRequest request) {
 		validateUpdate(request.email(), request.mobileNo());
-		return findBy(username).map(existing -> updateUser(mapper.updateEntity(request, existing), request));
+		return findByActive(username).map(existing -> updateUser(mapper.updateEntity(request, existing), request))
+				.orElseThrow(ResourceNotFoundException::new);
 	}
 
 	private void validateUpdate(String email, String mobileNo) {
@@ -83,15 +81,16 @@ class UserService implements IUserService {
 	}
 
 	public void deleteByUsername(String username) {
-		findBy(username).ifPresent(user -> {
+		findByActive(username).ifPresentOrElse(user -> {
 			user.setActive(false);
 			repository.save(user);
+		}, () -> {
+			throw new ResourceNotFoundException();
 		});
 	}
 
-	private Optional<User> findBy(String username) {
-		return Optional
-				.of(repository.findByUsername(username).filter(User::isActive).orElseThrow(UserNotFoundException::new));
+	private Optional<User> findByActive(String username) {
+		return repository.findByUsername(username).filter(User::isActive);
 	}
 
 }
