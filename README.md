@@ -12,10 +12,10 @@ Requirements for this project can be found on this [link](https://roadmap.sh/pro
   docker network create ecomm-net
   ```
 - Secret key must be configured for JWT signing.
-  - Navigate to `TokenService.java`.  
-    Directory: services/ecomm-account-management/src/main/java/com/apj/ecomm/account/domain/
-  - Run class as `Java Application` in your IDE.
-    ![image](https://github.com/user-attachments/assets/bd726ec9-8163-4e03-a7a0-bf3b79c922e7)
+  - Navigate to `TokenServiceTest.java`.  
+    Directory: services/ecomm-account-management/src/test/java/com/apj/ecomm/account/domain/
+  - Run class as `JUnit Test` in your IDE.  
+    <img width="573" height="45" alt="image" src="https://github.com/user-attachments/assets/ac326aa7-e2a9-4534-9a78-8229ad5edfd1" />
   - Copy the generated key and provide as `SECRET_KEY` in `microservice.yml`.  
     Directory: deployment/
     ```yaml
