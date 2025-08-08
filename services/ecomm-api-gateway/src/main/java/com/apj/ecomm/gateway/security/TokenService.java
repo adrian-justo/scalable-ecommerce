@@ -7,27 +7,32 @@ import java.util.List;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-
-import com.apj.ecomm.gateway.security.model.User;
+import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 
-@Component
-public class TokenService {
+@Service
+class TokenService {
 
 	@Value("${secret.key:}")
 	private String secretKey;
 
-	public boolean isValid(String token) {
-		Claims payload = getPayload(token);
+	boolean isValid(final String token) {
+		Claims payload;
+		try {
+			payload = getPayload(token);
+		}
+		catch (final JwtException e) {
+			return false;
+		}
 		return isValid(payload.getExpiration());
 	}
 
-	public Claims getPayload(String token) {
+	private Claims getPayload(final String token) {
 		return Jwts.parser().verifyWith(getSignKey()).build().parseSignedClaims(token).getPayload();
 	}
 
@@ -35,14 +40,18 @@ public class TokenService {
 		return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
 	}
 
-	public boolean isValid(Date expiration) {
+	private boolean isValid(final Date expiration) {
 		return Date.from(Instant.now()).before(expiration);
 	}
 
-	public User getUser(String token) {
-		Claims claims = getPayload(token);
-		return User.builder().username(claims.getSubject()).roles((List<String>) claims.get("roles"))
-				.shopName((String) claims.get("shopName")).build();
+	User getUser(final String token) {
+		final var claims = getPayload(token);
+		return User.builder()
+			.username(claims.getSubject())
+			.roles((List<String>) claims.get("roles"))
+			.shopId((String) claims.get("shopId"))
+			.shopName((String) claims.get("shopName"))
+			.build();
 	}
 
 }

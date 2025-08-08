@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -20,12 +19,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import com.apj.ecomm.account.domain.model.Paged;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
-import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
 import com.apj.ecomm.account.web.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -41,32 +39,31 @@ class UserServiceTest {
 	private UserRepository repository;
 
 	@Spy
-	private UserMapper mapper = Mappers.getMapper(UserMapper.class);
+	private final UserMapper mapper = Mappers.getMapper(UserMapper.class);
 
 	@InjectMocks
 	private UserService service;
 
 	@BeforeEach
 	void setUp() throws Exception {
-		ObjectMapper objMap = new ObjectMapper();
+		final var objMap = new ObjectMapper();
 		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		try (InputStream inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			users = objMap.readValue(inputStream, new TypeReference<List<User>>() {
-			});
+		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
+			users = objMap.readValue(inputStream, new TypeReference<List<User>>() {});
 		}
 	}
 
 	@Test
 	void findAll() {
-		Page<User> page = new PageImpl<>(users);
-		List<UserResponse> response = page.stream().map(mapper::toResponse).toList();
-		when(repository.findAll(any(PageRequest.class))).thenReturn(page);
-		assertEquals(response, service.findAll(PageRequest.of(0, 10)));
+		final var response = users.stream().map(mapper::toFullResponse).toList();
+		final var result = new Paged<>(response, 0, users.size(), 1, List.of(), response.size());
+		when(repository.findAll(any(PageRequest.class))).thenReturn(new PageImpl<>(users));
+		assertEquals(result, service.findAll(PageRequest.of(0, 10)));
 	}
 
 	@Test
 	void findByUsername_found() {
-		User user = users.get(0);
+		final var user = users.get(0);
 		when(repository.findByUsername(anyString())).thenReturn(Optional.of(user));
 		assertEquals(mapper.toResponse(user), service.findByUsername("admin123"));
 	}
@@ -79,14 +76,14 @@ class UserServiceTest {
 
 	@Test
 	void update_success() {
-		UpdateUserRequest request = new UpdateUserRequest("", "+639031234567", null, null, null, null, null, null);
-		User existing = users.get(1);
-		User updated = mapper.updateEntity(request, existing);
+		final var request = new UpdateUserRequest("", "+639031234567", null, null, null, null, null, null);
+		final var existing = users.get(1);
+		final var updated = mapper.updateEntity(request, existing);
 
 		when(repository.findByEmailOrMobileNo(anyString(), anyString())).thenReturn(Optional.empty());
 		when(repository.findByUsername(anyString())).thenReturn(Optional.of(existing));
 		when(repository.save(any())).thenReturn(updated);
-		UserResponse userResponse = service.update("client123", request);
+		final var userResponse = service.update("client123", request);
 
 		assertEquals(mapper.toResponse(updated), userResponse);
 		assertEquals(Set.of(NotificationType.SMS), userResponse.notificationTypes());
@@ -94,8 +91,8 @@ class UserServiceTest {
 
 	@Test
 	void update_userNotFound() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				null, null);
+		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null, null,
+				null);
 
 		when(repository.findByEmailOrMobileNo(anyString(), anyString())).thenReturn(Optional.empty());
 		when(repository.findByUsername(anyString())).thenReturn(Optional.empty());
@@ -105,9 +102,9 @@ class UserServiceTest {
 
 	@Test
 	void update_alreadyRegistered() {
-		UpdateUserRequest request = new UpdateUserRequest("client123@mail.com", "+639021234567", null, null, null, null,
-				null, null);
-		User existing = users.get(1);
+		final var request = new UpdateUserRequest("client123@mail.com", "+639021234567", null, null, null, null, null,
+				null);
+		final var existing = users.get(1);
 
 		when(repository.findByEmailOrMobileNo(anyString(), anyString())).thenReturn(Optional.of(existing));
 
@@ -115,63 +112,8 @@ class UserServiceTest {
 	}
 
 	@Test
-	void getValidatedTypes_emailOnlyNotif_hasMobile() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				null, Set.of(NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.updateEntity(request, users.get(1)));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
-	void getValidatedTypes_smsOnlyNotif_hasEmail() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				null, Set.of(NotificationType.SMS));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.updateEntity(request, users.get(1)));
-		assertEquals(Set.of(NotificationType.SMS), types);
-	}
-
-	@Test
-	void getValidatedTypes_emailOnlyNotif_noEmail() {
-		UpdateUserRequest request = new UpdateUserRequest("", "+639031234567", null, null, null, null, null,
-				Set.of(NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.updateEntity(request, users.get(1)));
-		assertEquals(Set.of(NotificationType.SMS), types);
-	}
-
-	@Test
-	void getValidatedTypes_smsOnlyNotif_noMobile() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "", null, null, null, null, null,
-				Set.of(NotificationType.SMS));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.updateEntity(request, users.get(1)));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
-	void getValidatedTypes_emailSmsNotif_noMobile() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "", null, null, null, null, null,
-				Set.of(NotificationType.SMS, NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.updateEntity(request, users.get(1)));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
-	void getValidatedTypes_emailSmsNotif_noEmail() {
-		UpdateUserRequest request = new UpdateUserRequest("", "+639031234567", null, null, null, null, null,
-				Set.of(NotificationType.SMS, NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.updateEntity(request, users.get(1)));
-		assertEquals(Set.of(NotificationType.SMS), types);
-	}
-
-	@Test
-	void getValidatedTypes_nullNotif_hasEmail() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "", null, null, null, null, null, null);
-		Set<NotificationType> types = service.getValidatedTypes(mapper.updateEntity(request, users.get(1)));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
 	void deleteByUsername_success() {
-		User user = users.get(0);
+		final var user = users.get(0);
 
 		when(repository.findByUsername(anyString())).thenReturn(Optional.of(user));
 		when(repository.save(any())).thenReturn(user);

@@ -51,8 +51,11 @@ class User implements UserDetails {
 	private String mobileNo;
 
 	private String password;
+
 	private String name;
+
 	private String shopName;
+
 	private String address;
 
 	@Enumerated(value = EnumType.STRING)

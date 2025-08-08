@@ -20,7 +20,7 @@ class TestcontainersConfiguration {
 	@Bean
 	@ServiceConnection
 	RedisContainer redisContainer() {
-		return new RedisContainer(DockerImageName.parse("redis:latest"));
+		return new RedisContainer(DockerImageName.parse("redis:alpine"));
 	}
 
 }

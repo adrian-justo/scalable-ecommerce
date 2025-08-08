@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 
 public class TestEcommProductCatalogApplication {
 
-	public static void main(String[] args) {
+	public static void main(final String[] args) {
 		SpringApplication.from(EcommProductCatalogApplication::main).with(TestcontainersConfiguration.class).run(args);
 	}
 

@@ -4,7 +4,7 @@ import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 
-public interface IAuthService {
+public interface IAuthService extends IAccountService {
 
 	UserResponse register(CreateUserRequest request);
 

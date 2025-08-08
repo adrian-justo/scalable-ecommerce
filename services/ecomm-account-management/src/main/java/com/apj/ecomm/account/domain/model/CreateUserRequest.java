@@ -2,7 +2,6 @@ package com.apj.ecomm.account.domain.model;
 
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -12,6 +11,7 @@ import com.apj.ecomm.account.domain.NotificationType;
 import com.apj.ecomm.account.domain.Role;
 import com.apj.ecomm.account.web.exception.RequestArgumentNotValidException;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -19,11 +19,13 @@ import jakarta.validation.constraints.Pattern;
 public record CreateUserRequest(@NotBlank(message = AppConstants.MSG_FIELD_BLANK) String username,
 		@Email(message = AppConstants.MSG_VALUE_INVALID) String email,
 		@Pattern(regexp = AppConstants.PATTERN_MOBILE, message = AppConstants.MSG_VALUE_INVALID) String mobileNo,
-		@NotBlank(message = AppConstants.MSG_FIELD_BLANK) @Pattern(regexp = AppConstants.PATTERN_PASSWORD, message = AppConstants.MSG_PASSWORD_INVALID) String password,
+		@Schema(description = AppConstants.MSG_PASSWORD_INVALID, minLength = 8) @NotBlank(
+				message = AppConstants.MSG_FIELD_BLANK) @Pattern(regexp = AppConstants.PATTERN_PASSWORD,
+						message = AppConstants.MSG_PASSWORD_INVALID) String password,
 		String name, String shopName, Set<Role> roles, Set<NotificationType> notificationTypes) {
 
 	public void validate() {
-		Map<String, List<String>> errors = new HashMap<>();
+		final var errors = new HashMap<String, List<String>>();
 
 		if (email != null && email.isBlank() && mobileNo != null && mobileNo.isBlank()) {
 			errors.put("email, mobile", List.of(AppConstants.MSG_EMAIL_MOBILE_BLANK));
@@ -41,9 +43,8 @@ public record CreateUserRequest(@NotBlank(message = AppConstants.MSG_FIELD_BLANK
 			errors.put("notificationTypes", List.of(AppConstants.MSG_SET_INVALID));
 		}
 
-		if (!errors.isEmpty()) {
+		if (!errors.isEmpty())
 			throw new RequestArgumentNotValidException(errors);
-		}
 	}
 
 }

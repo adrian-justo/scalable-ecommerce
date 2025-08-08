@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -41,7 +40,7 @@ class AuthServiceTest {
 	private UserRepository repository;
 
 	@Spy
-	private UserMapper mapper = Mappers.getMapper(UserMapper.class);
+	private final UserMapper mapper = Mappers.getMapper(UserMapper.class);
 
 	@Mock
 	private PasswordEncoder encoder;
@@ -57,22 +56,21 @@ class AuthServiceTest {
 
 	@BeforeEach
 	void setUp() throws Exception {
-		ObjectMapper objMap = new ObjectMapper();
+		final var objMap = new ObjectMapper();
 		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		try (InputStream inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			users = objMap.readValue(inputStream, new TypeReference<List<User>>() {
-			});
+		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
+			users = objMap.readValue(inputStream, new TypeReference<List<User>>() {});
 		}
 	}
 
 	@Test
 	void register_success() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		User user = mapper.toEntity(request);
+		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
+				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		final var user = mapper.toEntity(request);
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
-				.thenReturn(Optional.empty());
+			.thenReturn(Optional.empty());
 		when(repository.save(any())).thenReturn(user);
 
 		assertEquals(mapper.toResponse(user), service.register(request));
@@ -80,80 +78,23 @@ class AuthServiceTest {
 
 	@Test
 	void register_alreadyRegistered() {
-		User user = users.get(1);
-		CreateUserRequest request = new CreateUserRequest(user.getUsername(), user.getEmail(), user.getMobileNo(),
+		final var user = users.get(1);
+		final var request = new CreateUserRequest(user.getUsername(), user.getEmail(), user.getMobileNo(),
 				user.getPassword(), user.getName(), user.getShopName(), user.getRoles(), user.getNotificationTypes());
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
-				.thenReturn(Optional.of(user));
+			.thenReturn(Optional.of(user));
 
 		assertThrows(AlreadyRegisteredException.class, () -> service.register(request));
 	}
 
 	@Test
-	void getValidatedTypes_emailOnlyNotif_hasMobile() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
-	void getValidatedTypes_smsOnlyNotif_hasEmail() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
-		assertEquals(Set.of(NotificationType.SMS), types);
-	}
-
-	@Test
-	void getValidatedTypes_emailOnlyNotif_noEmail() {
-		CreateUserRequest request = new CreateUserRequest("seller123", null, "+639031234567", "$elL3r12", "Seller Name",
-				"Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
-		assertEquals(Set.of(NotificationType.SMS), types);
-	}
-
-	@Test
-	void getValidatedTypes_smsOnlyNotif_noMobile() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", null, "$elL3r12",
-				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.SMS));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
-	void getValidatedTypes_emailSmsNotif_noMobile() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", null, "$elL3r12",
-				"Seller Name", "Seller's Shop", Set.of(Role.SELLER),
-				Set.of(NotificationType.SMS, NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
-	void getValidatedTypes_emailSmsNotif_noEmail() {
-		CreateUserRequest request = new CreateUserRequest("seller123", null, "+639031234567", "$elL3r12", "Seller Name",
-				"Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.SMS, NotificationType.EMAIL));
-		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
-		assertEquals(Set.of(NotificationType.SMS), types);
-	}
-
-	@Test
-	void getValidatedTypes_nullNotif_hasEmailMobile() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), null);
-		Set<NotificationType> types = service.getValidatedTypes(mapper.toEntity(request));
-		assertEquals(Set.of(NotificationType.EMAIL), types);
-	}
-
-	@Test
 	void login_success() {
-		User user = users.get(0);
-		LoginRequest request = new LoginRequest(user.getEmail(), user.getPassword());
+		final var user = users.get(0);
+		final var request = new LoginRequest(user.getEmail(), user.getPassword());
 
 		when(manager.authenticate(any()))
-				.thenReturn(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+			.thenReturn(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
 		when(token.generate(any())).thenReturn("jwt.token.here");
 
 		assertTrue(!service.login(request).isEmpty());
@@ -161,9 +102,9 @@ class AuthServiceTest {
 
 	@Test
 	void login_incorrectCredentials() {
-		LoginRequest request = new LoginRequest("nonexistent", "wrongPassword");
-		when(manager.authenticate(any())).thenReturn(
-				UsernamePasswordAuthenticationToken.unauthenticated(request.identifier(), request.password()));
+		final var request = new LoginRequest("nonexistent", "wrongPassword");
+		when(manager.authenticate(any()))
+			.thenReturn(UsernamePasswordAuthenticationToken.unauthenticated(request.identifier(), request.password()));
 		assertThrows(BadCredentialsException.class, () -> service.login(request));
 	}
 

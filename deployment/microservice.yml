@@ -18,7 +18,7 @@ x-redis: &redis
   SPRING_DATA_REDIS_PORT: 6379
 
 x-jwt: &jwt
-  SECRET_KEY: ${SECRET_KEY:-gEn3r8EdK3y} # Generate key in Account Management TokenService class
+  SECRET_KEY: ${SECRET_KEY:-gEn3r8EdK3y} # Generate key in Account Management TokenServiceTest class
 
 x-common-config: &common-config
   restart: unless-stopped

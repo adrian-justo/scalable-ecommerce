@@ -16,7 +16,8 @@ class AuthConfig {
 	@Bean
 	UserDetailsService userDetailsService() {
 		return identifier -> repository.findByUsernameOrEmailOrMobileNo(identifier, identifier, identifier)
-				.filter(User::isActive).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+			.filter(User::isActive)
+			.orElseThrow(() -> new UsernameNotFoundException("User not found"));
 	}
 
 }

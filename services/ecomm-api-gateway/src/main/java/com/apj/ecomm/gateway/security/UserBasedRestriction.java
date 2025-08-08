@@ -1,7 +1,5 @@
 package com.apj.ecomm.gateway.security;
 
-import java.util.Map;
-
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.ReactiveAuthorizationManager;
 import org.springframework.security.core.Authentication;
@@ -9,27 +7,24 @@ import org.springframework.security.web.server.authorization.AuthorizationContex
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriTemplate;
 
-import com.apj.ecomm.gateway.security.model.User;
-
 import reactor.core.publisher.Mono;
 
 @Component
-public class UserBasedRestriction implements ReactiveAuthorizationManager<AuthorizationContext> {
-
-	private static final UriTemplate USERS_URI = new UriTemplate("/users/{username}");
-
-	public AuthorizationDecision getDecision(Authentication authentication, AuthorizationContext context) {
-		Map<String, String> uriVariables = USERS_URI.match(context.getExchange().getRequest().getPath().value());
-		String requestUsername = uriVariables.get("username");
-		String tokenUsername = ((User) authentication.getPrincipal()).getUsername();
-		boolean hasAdminRole = authentication.getAuthorities().stream()
-				.anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
-		return new AuthorizationDecision(hasAdminRole || tokenUsername.equals(requestUsername));
-	}
+class UserBasedRestriction implements ReactiveAuthorizationManager<AuthorizationContext> {
 
 	@Override
-	public Mono<AuthorizationDecision> check(Mono<Authentication> authentication, AuthorizationContext context) {
-		return authentication.flatMap(auth -> Mono.just(getDecision(auth, context)));
+	public Mono<AuthorizationDecision> check(final Mono<Authentication> authentication,
+			final AuthorizationContext context) {
+		return authentication.map(auth -> {
+			final var uri = new UriTemplate("/users/{username}");
+			final var uriVariables = uri.match(context.getExchange().getRequest().getPath().value());
+			final var requestUsername = uriVariables.get("username");
+			final var tokenUsername = ((User) auth.getPrincipal()).getUsername();
+			final var hasAdminRole = auth.getAuthorities()
+				.stream()
+				.anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+			return new AuthorizationDecision(hasAdminRole || tokenUsername.equals(requestUsername));
+		});
 	}
 
 }

@@ -1,15 +1,14 @@
 package com.apj.ecomm.account.domain;
 
-import java.util.List;
-
 import org.springframework.data.domain.Pageable;
 
+import com.apj.ecomm.account.domain.model.Paged;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 
-public interface IUserService {
+public interface IUserService extends IAccountService {
 
-	List<UserResponse> findAll(Pageable pageable);
+	Paged<UserResponse> findAll(Pageable pageable);
 
 	UserResponse findByUsername(String username);
 

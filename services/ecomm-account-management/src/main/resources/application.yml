@@ -1,6 +1,7 @@
 spring:
   application:
-    name: ecomm-account-management
+    name: "@project.name@"
+    version: "@project.version@"
   config:
     import: 'optional:configserver:'
   rabbitmq:
@@ -19,6 +20,13 @@ spring:
       '[hibernate.format_sql]': true
   sql.init:
     mode: always
+  cloud.stream.bindings:
+    syncShopName-out-0:
+      destination: ${Q_PRD_SYNC_SN:product-sync-shop-name}
+#  docker.compose:
+#    lifecycle-management: none
+#  cloud.refresh:
+#    extra-refreshable: com.zaxxer.hikari.HikariDataSource
 
 server.port: 8083
 
@@ -45,3 +53,15 @@ management:
   otlp.tracing:
     endpoint: http://localhost:4317
     transport: grpc
+
+springdoc:
+  swagger-ui:
+    path: /docs/users
+  api-docs:
+    path: /docs/users/api
+
+application.description: "@project.description@"
+gateway.url: ${API_GATEWAY:http://localhost:8080}
+api.version: /api/v1
+users.path: /users
+auth.path: /auth

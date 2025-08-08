@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -15,6 +16,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 
 import com.apj.ecomm.gateway.constants.Paths;
 import com.apj.ecomm.gateway.constants.Role;
+import com.apj.ecomm.gateway.util.ProblemDetailUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,31 +24,47 @@ import lombok.RequiredArgsConstructor;
 @EnableWebFluxSecurity
 @EnableConfigurationProperties(Paths.class)
 @RequiredArgsConstructor
-public class SecurityConfig {
+class SecurityConfig {
 
-	private final AuthFilter authFilter;
-	private final AuthEntryPoint authEntryPoint;
-	private final UserBasedRestriction ubRestriction;
 	private final Paths paths;
 
+	private final AuthFilter authFilter;
+
+	private final UserBasedRestriction ubRestriction;
+
 	@Bean
-	SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
-		return http.csrf(ServerHttpSecurity.CsrfSpec::disable)
-				.exceptionHandling(e -> e.authenticationEntryPoint(authEntryPoint))
-				.authorizeExchange(authorizeExchangeSpec -> authorizeExchangeSpec
-						.pathMatchers(convert(paths.permitted())).permitAll()
-						.pathMatchers(HttpMethod.GET, convert(paths.getOnly())).permitAll()
-						.pathMatchers(convert(paths.adminOnly())).hasRole(Role.ADMIN.name())
-						.pathMatchers(convert(paths.buyerOnly())).hasRole(Role.BUYER.name())
-						.pathMatchers(convert(paths.sellerOnly())).hasRole(Role.SELLER.name())
-						.pathMatchers(convert(paths.nonSeller())).hasAnyRole(Role.ADMIN.name(), Role.BUYER.name())
-						.pathMatchers(convert(paths.nonBuyer())).hasAnyRole(Role.ADMIN.name(), Role.SELLER.name())
-						.pathMatchers(convert(paths.userBased())).access(ubRestriction).anyExchange().authenticated())
-				.addFilterBefore(authFilter, SecurityWebFiltersOrder.AUTHENTICATION).httpBasic(HttpBasicSpec::disable)
-				.formLogin(FormLoginSpec::disable).build();
+	SecurityWebFilterChain securityWebFilterChain(final ServerHttpSecurity http) {
+		return http.csrf(ServerHttpSecurity.CsrfSpec::disable).exceptionHandling(custom -> {
+			custom.authenticationEntryPoint((exchange, ex) -> ProblemDetailUtils.write(exchange,
+					HttpStatus.UNAUTHORIZED, "Token is invalid / Session has expired"));
+			custom.accessDeniedHandler((exchange, ex) -> ProblemDetailUtils.write(exchange, HttpStatus.FORBIDDEN,
+					"Access to this resource is forbidden"));
+		})
+			.authorizeExchange(auth -> auth.pathMatchers(convert(paths.permitted()))
+				.permitAll()
+				.pathMatchers(HttpMethod.GET, convert(paths.getOnly()))
+				.permitAll()
+				.pathMatchers(convert(paths.adminOnly()))
+				.hasRole(Role.ADMIN.name())
+				.pathMatchers(convert(paths.buyerOnly()))
+				.hasRole(Role.BUYER.name())
+				.pathMatchers(convert(paths.sellerOnly()))
+				.hasRole(Role.SELLER.name())
+				.pathMatchers(convert(paths.nonSeller()))
+				.hasAnyRole(Role.ADMIN.name(), Role.BUYER.name())
+				.pathMatchers(convert(paths.nonBuyer()))
+				.hasAnyRole(Role.ADMIN.name(), Role.SELLER.name())
+				.pathMatchers(convert(paths.userBased()))
+				.access(ubRestriction)
+				.anyExchange()
+				.authenticated())
+			.addFilterBefore(authFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+			.httpBasic(HttpBasicSpec::disable)
+			.formLogin(FormLoginSpec::disable)
+			.build();
 	}
 
-	private String[] convert(List<String> paths) {
+	private String[] convert(final List<String> paths) {
 		return paths.toArray(new String[0]);
 	}
 
