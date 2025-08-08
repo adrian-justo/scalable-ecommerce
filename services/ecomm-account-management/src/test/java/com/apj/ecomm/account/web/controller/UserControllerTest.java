@@ -14,7 +14,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.List;
 import java.util.Set;
 
@@ -28,10 +27,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
 import com.apj.ecomm.account.domain.IUserService;
 import com.apj.ecomm.account.domain.Role;
+import com.apj.ecomm.account.domain.model.Paged;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.RequestArgumentNotValidException;
@@ -39,8 +38,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@WebMvcTest(controllers = UserController.class, properties = { "eureka.client.enabled=false",
-		"spring.cloud.config.enabled=false" })
+@WebMvcTest(controllers = UserController.class,
+		properties = { "eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
 @AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -61,84 +60,85 @@ class UserControllerTest {
 	@BeforeEach
 	void setUp() throws IOException {
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		try (InputStream inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
-			});
+		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
+			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {});
 		}
 
 	}
 
 	@Test
 	void accountDetails_getAll() throws Exception {
-		when(service.findAll(any())).thenReturn(response);
-		ResultActions action = mvc.perform(get(uri));
+		final var result = new Paged<UserResponse>(response, 0, 10, 1, List.of(), response.size());
 
-		String jsonResponse = mapper.writeValueAsString(response);
+		when(service.findAll(any())).thenReturn(result);
+		final var action = mvc.perform(get(uri));
+
+		final var jsonResponse = mapper.writeValueAsString(result);
 		action.andExpect(status().isOk()).andExpect(content().json(jsonResponse));
 		JSONAssert.assertEquals(jsonResponse, action.andReturn().getResponse().getContentAsString(), true);
 	}
 
 	@Test
 	void accountDetails_getSpecific() throws Exception {
-		UserResponse userResponse = response.get(0);
+		final var userResponse = response.get(0);
 
 		when(service.findByUsername(anyString())).thenReturn(userResponse);
-		ResultActions action = mvc.perform(get(uri + "/admin123"));
+		final var action = mvc.perform(get(uri + "/admin123"));
 
-		String jsonResponse = mapper.writeValueAsString(userResponse);
+		final var jsonResponse = mapper.writeValueAsString(userResponse);
 		action.andExpect(status().isOk()).andExpect(content().json(jsonResponse));
 		JSONAssert.assertEquals(jsonResponse, action.andReturn().getResponse().getContentAsString(), true);
 	}
 
 	@Test
 	void accountManagement_success() throws Exception {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				null, null);
-		UserResponse user = response.get(0);
-		UserResponse userResponse = new UserResponse(user.username(), request.email(), request.mobileNo(),
-				user.password(), user.name(), user.shopName(), user.address(), user.roles(), user.notificationTypes(),
-				user.active());
+		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null, null,
+				null);
+		final var user = response.get(0);
+		final var userResponse = new UserResponse(user.id(), user.username(), request.email(), request.mobileNo(),
+				user.name(), user.shopName(), user.address(), user.roles(), user.notificationTypes(), user.createdAt(),
+				user.updatedAt(), user.active());
 
 		when(service.update(anyString(), any())).thenReturn(userResponse);
-		ResultActions action = mvc.perform(
+		final var action = mvc.perform(
 				put(uri + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)));
 
-		String jsonResponse = mapper.writeValueAsString(userResponse);
+		final var jsonResponse = mapper.writeValueAsString(userResponse);
 		action.andExpect(status().isOk()).andExpect(content().json(jsonResponse));
 		JSONAssert.assertEquals(jsonResponse, action.andReturn().getResponse().getContentAsString(), true);
 	}
 
 	@Test
 	void accountManagement_invalidDetails() throws Exception {
-		UpdateUserRequest request = new UpdateUserRequest("updatedemail.com", "0", null, null, null, null, null, null);
+		final var request = new UpdateUserRequest("updatedemail.com", "0", null, null, null, null, null, null);
 		mvc.perform(put(uri + "/admin123").contentType("application/json").content(mapper.writeValueAsString(request)))
-				.andExpect(status().isBadRequest());
+			.andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void accountManagement_emailSmsMissing() {
-		UpdateUserRequest request = new UpdateUserRequest("", "", null, null, null, null, null, null);
+		final var request = new UpdateUserRequest("", "", null, null, null, null, null, null);
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void accountManagement_invalidRole() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
 				Set.of(Role.ADMIN, Role.BUYER), null);
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void accountManagement_seller_noShopName() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
+		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
 				Set.of(Role.SELLER), null);
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void accountManagement_invalidNotificationType() {
-		UpdateUserRequest request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
-				null, Set.of());
+		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null, null,
+				Set.of());
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 

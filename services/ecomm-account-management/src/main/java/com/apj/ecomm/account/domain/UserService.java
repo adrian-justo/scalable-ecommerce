@@ -1,18 +1,19 @@
 package com.apj.ecomm.account.domain;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.apj.ecomm.account.domain.model.Paged;
+import com.apj.ecomm.account.domain.model.ShopNameUpdatedEvent;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
@@ -28,28 +29,37 @@ import lombok.RequiredArgsConstructor;
 class UserService implements IUserService {
 
 	private final UserRepository repository;
+
 	private final UserMapper mapper;
+
 	private final PasswordEncoder encoder;
 
+	private final ApplicationEventPublisher eventPublisher;
+
 	@Transactional(readOnly = true)
-	public List<UserResponse> findAll(Pageable pageable) {
-		return repository.findAll(pageable).stream().map(mapper::toResponse).toList();
+	public Paged<UserResponse> findAll(final Pageable pageable) {
+		final Page<UserResponse> result = repository.findAll(pageable).map(mapper::toFullResponse);
+
+		final var response = new Paged<>(result.getContent(), result.getNumber(), result.getSize(),
+				result.getTotalPages(), new ArrayList<>(), result.getTotalElements());
+		response.setSort(result.getSort());
+		return response;
 	}
 
 	@Transactional(readOnly = true)
-	public UserResponse findByUsername(String username) {
+	public UserResponse findByUsername(final String username) {
 		return findByActive(username).map(mapper::toResponse).orElseThrow(ResourceNotFoundException::new);
 	}
 
-	public UserResponse update(String username, UpdateUserRequest request) {
+	public UserResponse update(final String username, final UpdateUserRequest request) {
 		validateUpdate(request.email(), request.mobileNo());
-		return findByActive(username).map(existing -> updateUser(mapper.updateEntity(request, existing), request))
-				.orElseThrow(ResourceNotFoundException::new);
+		return findByActive(username).map(existing -> updateUser(existing, request))
+			.orElseThrow(ResourceNotFoundException::new);
 	}
 
-	private void validateUpdate(String email, String mobileNo) {
+	private void validateUpdate(final String email, final String mobileNo) {
 		repository.findByEmailOrMobileNo(email, mobileNo).ifPresent(user -> {
-			Map<String, List<String>> existing = new HashMap<>();
+			final var existing = new HashMap<String, List<String>>();
 			if (email != null && email.equals(user.getEmail())) {
 				existing.put("email", List.of(email));
 			}
@@ -60,27 +70,28 @@ class UserService implements IUserService {
 		});
 	}
 
-	private UserResponse updateUser(User updated, UpdateUserRequest request) {
-		updated.setNotificationTypes(getValidatedTypes(updated));
+	private UserResponse updateUser(final User existing, final UpdateUserRequest request) {
+		final var shopName = existing.getShopName();
+
+		final var user = mapper.updateEntity(request, existing);
+		user.setNotificationTypes(getValidatedTypes(user, user.getNotificationTypes()));
 		if (request.password() != null) {
-			updated.setPassword(encoder.encode(request.password()));
+			user.setPassword(encoder.encode(request.password()));
 		}
-		return mapper.toResponse(repository.save(updated));
+
+		final var updated = repository.save(user);
+		publishEvent(shopName, updated, request.shopName());
+		return mapper.toResponse(updated);
 	}
 
-	Set<NotificationType> getValidatedTypes(User updated) {
-		Set<NotificationType> types = new HashSet<>(updated.getNotificationTypes());
-		if (StringUtils.isBlank(updated.getEmail()) && StringUtils.isNotBlank(updated.getMobileNo())) {
-			types.remove(NotificationType.EMAIL);
-			types.add(NotificationType.SMS);
-		} else if (StringUtils.isBlank(updated.getMobileNo())) {
-			types.remove(NotificationType.SMS);
-			types.add(NotificationType.EMAIL);
+	private void publishEvent(final String shopName, final User updated, final String updatedShopName) {
+		final var response = mapper.toFullResponse(updated);
+		if (updatedShopName != null && !updatedShopName.equals(shopName)) {
+			eventPublisher.publishEvent(new ShopNameUpdatedEvent(response.id(), response.shopName()));
 		}
-		return types;
 	}
 
-	public void deleteByUsername(String username) {
+	public void deleteByUsername(final String username) {
 		findByActive(username).ifPresentOrElse(user -> {
 			user.setActive(false);
 			repository.save(user);
@@ -89,7 +100,7 @@ class UserService implements IUserService {
 		});
 	}
 
-	private Optional<User> findByActive(String username) {
+	private Optional<User> findByActive(final String username) {
 		return repository.findByUsername(username).filter(User::isActive);
 	}
 

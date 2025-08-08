@@ -10,9 +10,8 @@ import feign.RequestTemplate;
 public class TokenInterceptor implements RequestInterceptor {
 
 	@Override
-	public void apply(RequestTemplate template) {
-		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
-				.getRequestAttributes();
+	public void apply(final RequestTemplate template) {
+		final var requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 		if (requestAttributes != null) {
 			template.header(HttpHeaders.AUTHORIZATION,
 					requestAttributes.getRequest().getHeader(HttpHeaders.AUTHORIZATION));

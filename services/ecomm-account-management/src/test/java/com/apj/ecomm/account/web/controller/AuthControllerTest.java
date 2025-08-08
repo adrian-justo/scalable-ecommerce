@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.io.InputStream;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -22,7 +22,6 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
 import com.apj.ecomm.account.domain.IAuthService;
 import com.apj.ecomm.account.domain.NotificationType;
@@ -35,8 +34,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@WebMvcTest(controllers = AuthController.class, properties = { "eureka.client.enabled=false",
-		"spring.cloud.config.enabled=false" })
+@WebMvcTest(controllers = AuthController.class,
+		properties = { "eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
 @AutoConfigureMockMvc(addFilters = false)
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
@@ -57,72 +56,71 @@ class AuthControllerTest {
 	@BeforeEach
 	void setUp() throws Exception {
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-		try (InputStream inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
-			});
+		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
+			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {});
 		}
 	}
 
 	@Test
 	void userRegistration_success() throws Exception {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		UserResponse userResponse = new UserResponse(request.username(), request.email(), request.mobileNo(),
-				request.password(), request.name(), "", "", request.roles(), request.notificationTypes(), true);
+		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
+				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		final var userResponse = new UserResponse("id", request.username(), request.email(), request.mobileNo(),
+				request.name(), "", "", request.roles(), request.notificationTypes(), Instant.now(), Instant.now(),
+				true);
 
 		when(service.register(any())).thenReturn(userResponse);
-		ResultActions action = mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
-				.content(mapper.writeValueAsString(request)));
+		final var action = mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
+			.content(mapper.writeValueAsString(request)));
 
-		String jsonResponse = mapper.writeValueAsString(userResponse);
+		final var jsonResponse = mapper.writeValueAsString(userResponse);
 		action.andExpect(status().isCreated()).andExpect(content().json(jsonResponse));
 		JSONAssert.assertEquals(jsonResponse, action.andReturn().getResponse().getContentAsString(), true);
 	}
 
 	@Test
 	void userRegistration_invalidDetails() throws Exception {
-		CreateUserRequest request = new CreateUserRequest("", "", "", "", "", "", null, null);
+		final var request = new CreateUserRequest("", "", "", "", "", "", null, null);
 		mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
-				.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
+			.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
 	}
 
 	@Test
 	void userRegistration_emailSmsMissing() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "", "", "$elL3r12", "Seller Name",
-				"Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		final var request = new CreateUserRequest("seller123", "", "", "$elL3r12", "Seller Name", "Seller's Shop",
+				Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void userRegistration_invalidRole() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.ADMIN, Role.SELLER),
-				Set.of(NotificationType.EMAIL));
+		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
+				"Seller Name", "Seller's Shop", Set.of(Role.ADMIN, Role.SELLER), Set.of(NotificationType.EMAIL));
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void userRegistration_seller_noShopName() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
+				"Seller Name", "", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void userRegistration_invalidNotificationType() {
-		CreateUserRequest request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567",
-				"$elL3r12", "Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of());
+		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
+				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of());
 		assertThrows(RequestArgumentNotValidException.class, request::validate);
 	}
 
 	@Test
 	void login_success() throws Exception {
-		UserResponse userResponse = response.get(0);
-		LoginRequest request = new LoginRequest(userResponse.username(), userResponse.password());
+		final var userResponse = response.get(0);
+		final var request = new LoginRequest(userResponse.username(), "password");
 
 		when(service.login(any())).thenReturn("jwt.token.here");
 		mvc.perform(post(uri + "/login").contentType(MediaType.APPLICATION_JSON)
-				.content(mapper.writeValueAsString(request))).andExpect(status().isOk());
+			.content(mapper.writeValueAsString(request))).andExpect(status().isOk());
 	}
 
 }

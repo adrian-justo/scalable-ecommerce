@@ -37,9 +37,13 @@ class Product {
 	String name;
 
 	@Column(nullable = false)
+	String shopId;
+
+	@Column(nullable = false)
 	String shopName;
 
 	String description;
+
 	Set<String> images;
 
 	@ColumnDefault("'{general}'")

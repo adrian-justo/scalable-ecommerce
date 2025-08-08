@@ -2,10 +2,12 @@ package com.apj.ecomm.product.web.exception;
 
 import java.net.URI;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.hibernate.query.SemanticException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,47 +18,69 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.apj.ecomm.product.constants.AppConstants;
+
 @RestControllerAdvice
 class ProductExceptionHandler {
 
 	@ExceptionHandler(ResourceNotFoundException.class)
-	ProblemDetail handle(ResourceNotFoundException e) {
-		return getDetail(HttpStatus.NOT_FOUND, e.getResource() + " is not found");
+	ProblemDetail handle(final ResourceNotFoundException e) {
+		return getDetail(HttpStatus.NOT_FOUND, e.getResource() + AppConstants.MSG_NOT_FOUND);
 	}
 
 	@ExceptionHandler(MissingRequestHeaderException.class)
-	ProblemDetail handle(MissingRequestHeaderException e) {
+	ProblemDetail handle(final MissingRequestHeaderException e) {
 		return getDetail(HttpStatus.BAD_REQUEST,
 				"Required header is missing. Please ensure you are logged in and are using the correct url.");
 	}
 
 	@ExceptionHandler(RequestArgumentNotValidException.class)
-	ProblemDetail handle(RequestArgumentNotValidException e) {
-		return getDetail(HttpStatus.BAD_REQUEST, "Details provided is invalid", e.getErrors());
+	ProblemDetail handle(final RequestArgumentNotValidException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_BAD_REQUEST, e.getErrors());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	ProblemDetail handle(MethodArgumentNotValidException e) {
-		return getDetail(HttpStatus.BAD_REQUEST, "Details provided is invalid",
-				e.getBindingResult().getFieldErrors().stream().collect(Collectors.groupingBy(FieldError::getField,
-						Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList()))));
+	ProblemDetail handle(final MethodArgumentNotValidException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_BAD_REQUEST,
+				e.getBindingResult()
+					.getFieldErrors()
+					.stream()
+					.collect(Collectors.groupingBy(FieldError::getField,
+							Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList()))));
+	}
+
+	@ExceptionHandler(SemanticException.class)
+	ProblemDetail handle(final SemanticException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_FILTER_INVALID + "operation for "
+				+ (e.getMessage().contains("java.util.Set") ? "array" : "non-text") + " field");
+	}
+
+	@ExceptionHandler(NumberFormatException.class)
+	ProblemDetail handle(final NumberFormatException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_FILTER_INVALID + "value. " + e.getMessage());
+	}
+
+	@ExceptionHandler(DateTimeParseException.class)
+	ProblemDetail handle(final DateTimeParseException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_FILTER_INVALID + "value. " + e.getMessage());
 	}
 
 	@ExceptionHandler({ HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class })
-	ProblemDetail handle(Exception e) {
+	ProblemDetail handle(final RuntimeException e) {
 		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage());
 	}
 
-	private ProblemDetail getDetail(HttpStatus status, String title) {
-		ProblemDetail problemDetail = ProblemDetail.forStatus(status);
+	private ProblemDetail getDetail(final HttpStatus status, final String title) {
+		final var problemDetail = ProblemDetail.forStatus(status);
 		problemDetail.setTitle(title);
 		problemDetail.setType(URI.create("https://http.dev/" + status.value()));
 		problemDetail.setProperty("timestamp", Instant.now());
 		return problemDetail;
 	}
 
-	private ProblemDetail getDetail(HttpStatus status, String title, Map<String, List<String>> errors) {
-		ProblemDetail problemDetail = getDetail(status, title);
+	private ProblemDetail getDetail(final HttpStatus status, final String title,
+			final Map<String, List<String>> errors) {
+		final var problemDetail = getDetail(status, title);
 		problemDetail.setProperty("errors", errors);
 		return problemDetail;
 	}

@@ -22,7 +22,7 @@ class TestcontainersConfiguration {
 
 	@Bean
 	ServiceInstanceListSupplier eurekaContainer() {
-		String serviceId = "ECOMM-API-GATEWAY";
+		final var serviceId = "ECOMM-API-GATEWAY";
 		return ServiceInstanceListSuppliers.from(serviceId,
 				new DefaultServiceInstance(serviceId + "-1", serviceId, "localhost", API_GATEWAY_PORT, false));
 	}

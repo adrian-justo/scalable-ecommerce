@@ -1,10 +1,8 @@
 package com.apj.ecomm.gateway.security;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.ReactiveSecurityContextHolder;
-import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.stereotype.Component;
@@ -13,7 +11,6 @@ import org.springframework.web.server.WebFilter;
 import org.springframework.web.server.WebFilterChain;
 
 import com.apj.ecomm.gateway.constants.Paths;
-import com.apj.ecomm.gateway.security.model.User;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,42 +19,46 @@ import reactor.core.publisher.Mono;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class AuthFilter implements WebFilter {
+class AuthFilter implements WebFilter {
 
 	private final TokenService tokenService;
+
 	private final Paths paths;
 
 	@Override
-	public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-		String path = exchange.getRequest().getPath().value();
+	public Mono<Void> filter(final ServerWebExchange exchange, final WebFilterChain chain) {
+		final var request = exchange.getRequest();
+		final var path = request.getPath().value();
+		if (paths.permitted().stream().anyMatch(s -> path.matches(s.replace("*", ".*"))))
+			return chain.filter(exchange);
 
-		if (paths.permitted().stream().noneMatch(s -> path.matches(s.replace("*", ".*").replace(".*.*", ".*")))) {
-			String requestToken = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-
-			if (requestToken != null && requestToken.startsWith("Bearer")) {
-				String token = requestToken.substring(7);
-
-				if (tokenService.isValid(token) && SecurityContextHolder.getContext().getAuthentication() == null) {
-					User user = tokenService.getUser(token);
-
-					ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
-							.header("ecomm-shop-name", user.getShopName()).build();
-					ServerWebExchange modifiedExchange = exchange.mutate().request(modifiedRequest).build();
-					SecurityContext context = new SecurityContextImpl(
-							new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
-
-					return chain.filter(modifiedExchange)
-							.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
-				} else {
-					log.error("Token is malformed or expired");
-				}
-
-			} else {
-				log.warn("Token not provided in request header for path: {}", path);
-			}
+		final var requestToken = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+		if (requestToken == null || !requestToken.startsWith("Bearer")) {
+			log.warn("Token not provided in request header for path: {}", path);
+			return chain.filter(exchange);
 		}
 
-		return chain.filter(exchange);
+		final var token = requestToken.substring(7);
+		if (!tokenService.isValid(token)) {
+			log.error("Token is malformed or expired");
+			return chain.filter(exchange);
+		}
+
+		final var user = tokenService.getUser(token);
+		final var modifiedRequest = request.mutate()
+			.header("ecomm-shop-id", user.getShopId())
+			.header("ecomm-shop-name", user.getShopName())
+			.build();
+		final var modifiedExchange = exchange.mutate().request(modifiedRequest).build();
+
+		var context = SecurityContextHolder.getContext();
+		if (context.getAuthentication() == null) {
+			context = new SecurityContextImpl(
+					new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities()));
+		}
+
+		return chain.filter(modifiedExchange)
+			.contextWrite(ReactiveSecurityContextHolder.withSecurityContext(Mono.just(context)));
 	}
 
 }

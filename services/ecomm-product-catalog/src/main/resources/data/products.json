@@ -1,6 +1,7 @@
 [
   {
     "name": "Essence Mascara Lash Princess",
+    "shopId": "SHP001",
     "shopName": "Shop Name",
     "description": "The Essence Mascara Lash Princess is a popular mascara known for its volumizing and lengthening effects. Achieve dramatic lashes with this long-lasting and cruelty-free formula.",
     "images": [
@@ -15,6 +16,7 @@
   },
   {
     "name": "Chanel Coco Noir Eau De",
+    "shopId": "SHP002",
     "shopName": "Best Shop",
     "description": "Coco Noir by Chanel is an elegant and mysterious fragrance, featuring notes of grapefruit, rose, and sandalwood. Perfect for evening occasions.",
     "images": [
@@ -30,11 +32,9 @@
   },
   {
     "name": "Yellow Peeler",
+    "shopId": "SHP002",
     "shopName": "Best Shop",
     "description": "The Yellow Peeler is a handy tool for peeling fruits and vegetables with ease. Its bright yellow color adds a cheerful touch to your kitchen gadgets.",
-    "images": [
-      "https://placehold.co/300"
-    ],
     "categories": [
       "kitchen tools",
       "peelers"
@@ -42,6 +42,7 @@
   },
   {
     "name": "Apple Airpods",
+    "shopId": "SHP001",
     "shopName": "Shop Name",
     "description": "The Apple Airpods offer a seamless wireless audio experience. With easy pairing, high-quality sound, and Siri integration, they are perfect for on-the-go listening.",
     "images": [
@@ -53,5 +54,5 @@
     ],
     "stock": 59,
     "price": 129.99
-    }
+  }
 ]

@@ -17,57 +17,63 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.apj.ecomm.account.constants.AppConstants;
+
 @RestControllerAdvice
 class AccountExceptionHandler {
 
 	@ExceptionHandler(ResourceNotFoundException.class)
-	ProblemDetail handle(ResourceNotFoundException e) {
-		return getDetail(HttpStatus.NOT_FOUND, e.getResource() + " is not found");
+	ProblemDetail handle(final ResourceNotFoundException e) {
+		return getDetail(HttpStatus.NOT_FOUND, e.getResource() + AppConstants.MSG_NOT_FOUND);
 	}
 
 	@ExceptionHandler(AlreadyRegisteredException.class)
-	ProblemDetail handle(AlreadyRegisteredException e) {
-		return getDetail(HttpStatus.CONFLICT, "Details provided is already registered", e.getErrors());
+	ProblemDetail handle(final AlreadyRegisteredException e) {
+		return getDetail(HttpStatus.CONFLICT, AppConstants.MSG_CONFLICT, e.getErrors());
 	}
 
 	@ExceptionHandler(BadCredentialsException.class)
-	ProblemDetail handle(BadCredentialsException e) {
-		return getDetail(HttpStatus.UNAUTHORIZED, "Credentials provided is incorrect");
+	ProblemDetail handle(final BadCredentialsException e) {
+		return getDetail(HttpStatus.UNAUTHORIZED, AppConstants.MSG_UNAUTHORIZED);
 	}
 
 	@ExceptionHandler(MissingRequestHeaderException.class)
-	ProblemDetail handle(MissingRequestHeaderException e) {
+	ProblemDetail handle(final MissingRequestHeaderException e) {
 		return getDetail(HttpStatus.BAD_REQUEST,
 				"Required header is missing. Please ensure you are logged in and are using the correct url.");
 	}
 
 	@ExceptionHandler(RequestArgumentNotValidException.class)
-	ProblemDetail handle(RequestArgumentNotValidException e) {
-		return getDetail(HttpStatus.BAD_REQUEST, "Details provided is invalid", e.getErrors());
+	ProblemDetail handle(final RequestArgumentNotValidException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_BAD_REQUEST, e.getErrors());
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	ProblemDetail handle(MethodArgumentNotValidException e) {
-		return getDetail(HttpStatus.BAD_REQUEST, "Details provided is invalid",
-				e.getBindingResult().getFieldErrors().stream().collect(Collectors.groupingBy(FieldError::getField,
-						Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList()))));
+	ProblemDetail handle(final MethodArgumentNotValidException e) {
+		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_BAD_REQUEST,
+				e.getBindingResult()
+					.getFieldErrors()
+					.stream()
+					.collect(Collectors.groupingBy(FieldError::getField,
+							Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList()))));
 	}
 
 	@ExceptionHandler({ HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class })
-	ProblemDetail handle(Exception e) {
+	ProblemDetail handle(final RuntimeException e) {
 		return getDetail(HttpStatus.BAD_REQUEST, e.getMessage());
 	}
 
-	private ProblemDetail getDetail(HttpStatus status, String title) {
-		ProblemDetail problemDetail = ProblemDetail.forStatus(status);
+	private ProblemDetail getDetail(final HttpStatus status, final String title) {
+		final var problemDetail = ProblemDetail.forStatus(status);
 		problemDetail.setTitle(title);
 		problemDetail.setType(URI.create("https://http.dev/" + status.value()));
 		problemDetail.setProperty("timestamp", Instant.now());
 		return problemDetail;
 	}
 
-	private ProblemDetail getDetail(HttpStatus status, String title, Map<String, List<String>> errors) {
-		ProblemDetail problemDetail = getDetail(status, title);
+	private ProblemDetail getDetail(final HttpStatus status, final String title,
+			final Map<String, List<String>> errors) {
+		final var problemDetail = getDetail(status, title);
 		problemDetail.setProperty("errors", errors);
 		return problemDetail;
 	}

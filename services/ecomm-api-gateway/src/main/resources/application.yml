@@ -6,11 +6,11 @@ paths:
     - /swagger-ui/**
     - /webjars/**
     - /actuator/**
+    - /docs/**
     - /api/*/auth/**
   getOnly:
     - /api/*/products
     - /api/*/products/**
-    - /api/*/products/*/stock
   adminOnly:
     - /api/*/users
   buyerOnly:
@@ -49,11 +49,11 @@ spring:
       - name: Retry
         args:
           retries: 3
-          statuses: REQUEST_TIMEOUT, SERVICE_UNAVAILABLE, METHOD_NOT_ALLOWED
+          statuses: REQUEST_TIMEOUT, SERVICE_UNAVAILABLE
           methods: GET, POST, PUT, DELETE
           backoff:
-            firstBackoff: 1s
-            maxBackoff: 5s
+            firstBackoff: 5s
+            maxBackoff: 10s
             factor: 2
             basedOnPreviousValue: false
       - name: RequestRateLimiter
@@ -64,20 +64,25 @@ spring:
             requestedTokens: 1
           key-resolver: '#{@ipKeyResolver}'
     routes:
-      - id: Account Management Microservice
+      - id: Account Management Service
         uri: lb://ECOMM-ACCOUNT-MANAGEMENT
         predicates:
-          - Path=/api/*/users/**
+          - Path=/api/*/users/**, /api/*/auth/**, /docs/users/**
               
-      - id: Account Management Microservice - Authorization
-        uri: lb://ECOMM-ACCOUNT-MANAGEMENT
-        predicates:
-          - Path=/api/*/auth/**
-              
-      - id: Product Catalog Microservice
+      - id: Product Catalog Service
         uri: lb://ECOMM-PRODUCT-CATALOG
         predicates:
-          - Path=/api/*/products/**
+          - Path=/api/*/products/**, /docs/products/**
+
+springdoc.swagger-ui:
+  path: /docs
+  urls:
+    - name: Account Management API
+      url: /docs/users/api/acctmgt
+    - name: Authentication API
+      url: /docs/users/api/auth
+    - name: Product Catalog API
+      url: /docs/products/api
 
 server.port: 8080
 
@@ -121,5 +126,5 @@ resilience4j:
       automatic-transition-from-open-to-half-open-enabled: true
   timelimiter.configs:
     default:
-      timeout-duration: 5s
+      timeout-duration: 30s
       cancel-running-future: true

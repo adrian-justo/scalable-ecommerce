@@ -18,42 +18,39 @@ import com.apj.ecomm.product.domain.model.ProductResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.micrometer.observation.ObservationRegistry;
-import io.micrometer.observation.aop.ObservedAspect;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableCaching
 @RequiredArgsConstructor
-public class AppConfig {
+public class CacheConfig {
 
 	private final ObjectMapper mapper;
 
 	@Bean
-	ObservedAspect observedAspect(ObservationRegistry observationRegistry) {
-		return new ObservedAspect(observationRegistry);
+	RedisCacheManager redisCacheManager(final RedisConnectionFactory conn) {
+		return RedisCacheManager.builder(conn)
+			.cacheDefaults(configWithTtl(5))
+			.withInitialCacheConfigurations(
+					Map.of("catalog", configWithTtlFor(new TypeReference<List<ProductCatalog>>() {
+					}, 10), "product", configWithTtlFor(ProductResponse.class, 30)))
+			.build();
 	}
 
-	@Bean
-	RedisCacheManager redisCacheManager(RedisConnectionFactory conn) {
-		return RedisCacheManager.builder(conn).cacheDefaults(configWithTtl(5)).withInitialCacheConfigurations(
-				Map.of("catalog", configWithTtlFor(new TypeReference<List<ProductCatalog>>() {
-				}, 10), "product", configWithTtlFor(ProductResponse.class, 30))).build();
-	}
-
-	private RedisCacheConfiguration configWithTtl(long minutes) {
+	private RedisCacheConfiguration configWithTtl(final long minutes) {
 		return RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(minutes));
 	}
 
-	private RedisCacheConfiguration configWithTtlFor(TypeReference<?> type, long minutes) {
+	private RedisCacheConfiguration configWithTtlFor(final TypeReference<?> type, final long minutes) {
 		return configWithTtl(minutes).disableCachingNullValues()
-				.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(
-						new Jackson2JsonRedisSerializer<>(mapper.getTypeFactory().constructType(type))));
+			.serializeValuesWith(RedisSerializationContext.SerializationPair
+				.fromSerializer(new Jackson2JsonRedisSerializer<>(mapper.getTypeFactory().constructType(type))));
 	}
 
-	private RedisCacheConfiguration configWithTtlFor(Class<?> clazz, long minutes) {
-		return configWithTtl(minutes).disableCachingNullValues().serializeValuesWith(
-				RedisSerializationContext.SerializationPair.fromSerializer(new Jackson2JsonRedisSerializer<>(clazz)));
+	private RedisCacheConfiguration configWithTtlFor(final Class<?> clazz, final long minutes) {
+		return configWithTtl(minutes).disableCachingNullValues()
+			.serializeValuesWith(RedisSerializationContext.SerializationPair
+				.fromSerializer(new Jackson2JsonRedisSerializer<>(clazz)));
 	}
 
 }

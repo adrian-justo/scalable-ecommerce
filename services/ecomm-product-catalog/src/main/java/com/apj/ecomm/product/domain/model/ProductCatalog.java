@@ -1,5 +1,5 @@
 package com.apj.ecomm.product.domain.model;
 
-public record ProductCatalog(Long id, String image, String name, String price) {
+import java.math.BigDecimal;
 
-}
+public record ProductCatalog(Long id, String image, String name, BigDecimal price) {}
