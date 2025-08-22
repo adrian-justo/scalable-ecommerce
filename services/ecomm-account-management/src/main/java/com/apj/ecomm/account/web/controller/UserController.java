@@ -35,7 +35,7 @@ import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Account API", description = "Endpoints for viewing of account details and account management")
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("${api.version}${users.path}")
 @SecurityScheme(name = "authToken", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "authToken")
 @Observed(name = "controller.user")

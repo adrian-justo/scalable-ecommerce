@@ -35,8 +35,10 @@ public final class AppConstants {
 
 	public static final String MSG_BAD_REQUEST = "Details provided is invalid";
 
-	public static final String MSG_FORBIDDEN = "User session expired / User does not have access to this endpoint";
+	public static final String MSG_ACCESS_DENIED = "User does not have access to this ";
 
-	public static final String HEADER_SHOP_ID = "ecomm-shop-id";
+	public static final String MSG_FORBIDDEN = "User session expired / " + MSG_ACCESS_DENIED + "endpoint";
+
+	public static final String HEADER_USER_ID = "ecomm-user-id";
 
 }

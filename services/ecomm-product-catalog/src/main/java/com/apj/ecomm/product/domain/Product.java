@@ -2,6 +2,7 @@ package com.apj.ecomm.product.domain;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 import org.hibernate.annotations.ColumnDefault;
@@ -31,30 +32,30 @@ class Product {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	Long id;
+	private Long id;
 
 	@Column(nullable = false)
-	String name;
+	private String name;
 
 	@Column(nullable = false)
-	String shopId;
+	private String shopId;
 
 	@Column(nullable = false)
-	String shopName;
+	private String shopName;
 
-	String description;
+	private String description;
 
-	Set<String> images;
+	private List<String> images;
 
 	@ColumnDefault("'{general}'")
-	Set<String> categories;
+	private Set<String> categories;
 
 	@ColumnDefault("1")
-	Integer stock;
+	private Integer stock;
 
 	@Column(precision = AppConstants.PRICE_PRECISION, scale = AppConstants.PRICE_SCALE)
 	@ColumnDefault(AppConstants.PRICE_DEFAULT)
-	BigDecimal price;
+	private BigDecimal price;
 
 	@CreationTimestamp
 	private Instant createdAt;

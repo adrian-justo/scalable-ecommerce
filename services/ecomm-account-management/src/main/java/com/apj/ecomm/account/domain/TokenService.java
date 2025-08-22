@@ -28,7 +28,7 @@ class TokenService {
 	String generate(final User user) {
 		final var claims = new HashMap<String, Object>();
 		claims.put("roles", user.getRoles());
-		claims.put("shopId", user.getId().toString());
+		claims.put("userId", user.getId().toString());
 		claims.put("shopName", user.getShopName());
 		// Any other claims to be used as request header must also be added in
 		// AuthFilter class of API Gateway

@@ -28,8 +28,8 @@ public class OpenAPIConfig {
 			@Value("${products.path}") final String basePath) {
 		return openApi -> {
 			final var paths = openApi.getPaths();
-			final var keySet = paths.keySet().toArray(new String[0]); // To avoid
-																		// ConcurrentModificationException
+			// To avoid ConcurrentModificationException
+			final var keySet = paths.keySet().toArray(new String[0]);
 			final var path = apiVersion + basePath;
 
 			for (final String key : keySet) {
@@ -37,7 +37,7 @@ public class OpenAPIConfig {
 				paths.remove(key);
 			}
 
-			final var server = openApi.getServers().get(0);
+			final var server = openApi.getServers().getFirst();
 			server.setUrl(server.getUrl() + path);
 		};
 	}

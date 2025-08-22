@@ -1,0 +1,6 @@
+include:
+  - database.yml
+    
+networks:
+  ecomm-net:
+    driver: bridge

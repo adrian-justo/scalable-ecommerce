@@ -49,7 +49,7 @@ class TokenService {
 		return User.builder()
 			.username(claims.getSubject())
 			.roles((List<String>) claims.get("roles"))
-			.shopId((String) claims.get("shopId"))
+			.userId((String) claims.get("userId"))
 			.shopName((String) claims.get("shopName"))
 			.build();
 	}

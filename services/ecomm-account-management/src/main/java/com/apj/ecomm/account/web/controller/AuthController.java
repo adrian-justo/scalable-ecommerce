@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Authentication API", description = "Endpoints for account creation and login")
 @RestController
-@RequestMapping("/api/v1/auth/")
+@RequestMapping("${api.version}${auth.path}")
 @Observed(name = "controller.auth")
 @CrossOrigin
 @RequiredArgsConstructor

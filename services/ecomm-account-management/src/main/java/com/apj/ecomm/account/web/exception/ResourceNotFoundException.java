@@ -12,7 +12,7 @@ public class ResourceNotFoundException extends RuntimeException {
 	private final String resource;
 
 	public ResourceNotFoundException() {
-		this("User");
+		this("Account");
 	}
 
 }

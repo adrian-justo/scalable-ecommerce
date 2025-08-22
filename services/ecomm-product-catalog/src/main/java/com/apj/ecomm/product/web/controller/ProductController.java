@@ -41,7 +41,7 @@ import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Product API", description = "Endpoints for viewing and managing products")
 @RestController
-@RequestMapping("/api/v1/products")
+@RequestMapping("${api.version}${products.path}")
 @SecurityScheme(name = "authToken", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @Observed(name = "controller.product")
 @CrossOrigin
@@ -53,11 +53,14 @@ public class ProductController {
 	private static final String DESCRIPTION_FILTER = """
 			This filter is used to search products based on various criteria.
 			The filter can be a simple combination of a field, an operation and the value to compare with,
-			or a combination of conditions using a conjunction, and grouping.
-			For timestamp fields, use the format `YYYY-MM-DDTHH:mm:ssZ`
+			or a combination of conditions using a conjunction, and grouping.<br>
+			For timestamp fields, use the format `YYYY-MM-DDTHH:mm:ssZ`.<br>
+			For `price` field, using comma-separated values `#,##0.00` may not work as intended or result in parsing error,
+			 since `,` is interpreted as an operation modifier, please ensure commas are removed.
 			<br><br>
 			|Field Name|Type|
 			|--|--|
+			|id|number|
 			|name|text|
 			|shopId|text|
 			|shopName|text|
@@ -68,18 +71,18 @@ public class ProductController {
 			|createdAt|timestamp|
 			|updatedAt|timestamp|
 			<br><br>
-			|Symbol|Type|Description|
-			|--|--|--|
-			|`;`|conjunction|and|
-			|&vert;|conjunction|or|
-			|`:`|operation|equal to|
-			|`!:`|operation|not equal to|
-			|`%`|operation|containing(text)|
-			|`!%`|operation|not containing(text)|
-			|`<`|operation|less than or equal to(non-text)|
-			|`>`|operation|greater than or equal to(non-text)|
-			|`->`|operation modifier|between(non-text)|
-			|`(`...`)`|grouping|combined conditions|
+			|Symbol|Type|Description(Field Type Limitation)|Usage|
+			|--|--|--|--|
+			|`:`|operation|equal to/has|categories`:`perfumes|
+			|`%`|operation|containing(text except collection)|name`%`airpods|
+			|`<`|operation|less than or equal to(non-text)|price`<`10|
+			|`>`|operation|greater than or equal to(non-text)|stock`>`1|
+			|`!`|operation modifier|negation|shopName`!%`shop|
+			|`->`|operation modifier|between/ranging(non-text)|createdAt:2025-01-01T00:00:00Z`->`2025-01-01T23:59:59Z|
+			|`,`|operation modifier|in/any of(non-collection)|id:1`,`2`,`3|
+			|`;`|conjunction|and|price<10`;`stock>1|
+			|&vert;|conjunction|or|price<10 &vert; stock>1|
+			|`(`...`)`|grouping|combined conditions|`(`price<10;stock>1`)`|
 			""";
 
 	private static final String EXAMPLE_COMBINATION = "categories:perfumes|(price<10;stock>1)|createdAt:2025-01-01T00:00:00Z->2025-01-01T23:59:59Z";
@@ -126,7 +129,7 @@ public class ProductController {
 	@ResponseStatus(HttpStatus.CREATED)
 	@SecurityRequirement(name = "authToken")
 	public ProductResponse listProduct(
-			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_SHOP_ID) final String shopId,
+			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String shopId,
 			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_SHOP_NAME) final String shopName,
 			@RequestBody @Valid final CreateProductRequest request) {
 		return service.list(shopId, shopName, request);
@@ -136,12 +139,12 @@ public class ProductController {
 	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Product updated successfully"),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
-			@ApiResponse(responseCode = "404", description = "User is not allowed to update this product",
+			@ApiResponse(responseCode = "404", description = "Product" + AppConstants.MSG_NOT_FOUND+ " / " + AppConstants.MSG_ACCESS_DENIED + "product",
 					content = @Content) })
 	@PutMapping("/{productId}")
 	@SecurityRequirement(name = "authToken")
 	public ProductResponse updateProduct(@PathVariable final long productId,
-			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_SHOP_ID) final String shopId,
+			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String shopId,
 			@RequestBody @Valid final UpdateProductRequest request) {
 		validate(productId);
 		request.validate();

@@ -18,11 +18,11 @@ spring:
     show-sql: true
     properties:
       '[hibernate.format_sql]': true
-  sql.init:
-    mode: always
   cloud.stream.bindings:
     syncShopName-out-0:
       destination: ${Q_PRD_SYNC_SN:product-sync-shop-name}
+    createIfNotExist-out-0:
+      destination: ${Q_CRT_CREATE_INE:cart-create-if-not-exist}
 #  docker.compose:
 #    lifecycle-management: none
 #  cloud.refresh:
@@ -64,4 +64,6 @@ application.description: "@project.description@"
 gateway.url: ${API_GATEWAY:http://localhost:8080}
 api.version: /api/v1
 users.path: /users
-auth.path: /auth
+auth.path: /auth/
+products.path: /products
+carts.path: /carts

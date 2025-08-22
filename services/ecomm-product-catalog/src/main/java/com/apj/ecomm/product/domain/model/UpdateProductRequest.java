@@ -12,7 +12,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.PositiveOrZero;
 
-public record UpdateProductRequest(String name, String description, Set<String> images, Set<String> categories,
+public record UpdateProductRequest(String name, String description, List<String> images, Set<String> categories,
 		@PositiveOrZero(message = AppConstants.MSG_VALUE_GT_EQ + 0) Integer stock,
 		@Digits(integer = AppConstants.PRICE_PRECISION, fraction = AppConstants.PRICE_SCALE) @DecimalMin(
 				value = AppConstants.PRICE_DEFAULT,

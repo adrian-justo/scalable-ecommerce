@@ -1,6 +1,7 @@
 package com.apj.ecomm.product.domain;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 
 import org.springframework.data.jpa.domain.Specification;
@@ -27,21 +28,30 @@ class ProductSpec implements Specification<Product> {
 	@Override
 	public Predicate toPredicate(final Root<Product> root, final CriteriaQuery<?> query,
 			final CriteriaBuilder builder) {
+		final var predicate = getPredicate(root, builder, operation);
+		return predicate != null && operation.contains("!") ? predicate.not() : predicate;
+
+	}
+
+	private Predicate getPredicate(final Root<Product> root, final CriteriaBuilder builder, final String operation) {
 		final var fieldIsInstant = Instant.class.isAssignableFrom(root.get(field).getJavaType());
 		if (value.contains("->")) {
 			final var values = value.split("->");
 			return fieldIsInstant ? builder.between(root.get(field), Instant.parse(values[0]), Instant.parse(values[1]))
-					: builder.between(root.get(field), values[0].toLowerCase(), values[1].toLowerCase());
+					: builder.between(root.get(field), values[0], values[1]);
+		}
+		else if (value.contains(",")) {
+			final var values = value.split(",");
+			return lowerIfString(root.get(field), builder)
+				.in(fieldIsInstant ? Arrays.stream(values).map(Instant::parse).toList()
+						: Arrays.stream(values).map(String::toLowerCase).toList());
 		}
 
 		final var fieldIsCollection = Collection.class.isAssignableFrom(root.get(field).getJavaType());
-		return switch (operation) {
+		return switch (operation.replace("!", "")) {
 			case ":" -> fieldIsCollection ? builder.gt(arrayPosition(root, builder), 0)
 					: builder.equal(lowerIfString(root.get(field), builder), parseIf(fieldIsInstant, value));
-			case "!:" -> fieldIsCollection ? builder.equal(arrayPosition(root, builder), 0)
-					: builder.notEqual(lowerIfString(root.get(field), builder), parseIf(fieldIsInstant, value));
 			case "%" -> builder.like(lowerIfString(root.get(field), builder), "%" + value.toLowerCase() + "%");
-			case "!%" -> builder.notLike(lowerIfString(root.get(field), builder), "%" + value.toLowerCase() + "%");
 			case "<" -> fieldIsInstant ? builder.lessThanOrEqualTo(root.get(field), Instant.parse(value))
 					: builder.lessThanOrEqualTo(root.get(field), value);
 			case ">" -> fieldIsInstant ? builder.greaterThanOrEqualTo(root.get(field), Instant.parse(value))

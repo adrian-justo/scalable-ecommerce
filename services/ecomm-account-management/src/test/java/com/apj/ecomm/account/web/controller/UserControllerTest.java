@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -44,7 +45,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
-	private final String uri = "/api/v1/users";
+	@Value("${api.version}${users.path}")
+	private String uri;
 
 	private List<UserResponse> response;
 
@@ -68,7 +70,7 @@ class UserControllerTest {
 
 	@Test
 	void accountDetails_getAll() throws Exception {
-		final var result = new Paged<UserResponse>(response, 0, 10, 1, List.of(), response.size());
+		final var result = new Paged<>(response, 0, 10, 1, List.of(), response.size());
 
 		when(service.findAll(any())).thenReturn(result);
 		final var action = mvc.perform(get(uri));

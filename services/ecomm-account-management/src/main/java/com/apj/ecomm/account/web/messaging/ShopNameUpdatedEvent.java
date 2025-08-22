@@ -1,3 +1,3 @@
-package com.apj.ecomm.account.domain.model;
+package com.apj.ecomm.account.web.messaging;
 
 public record ShopNameUpdatedEvent(String shopId, String shopName) {}

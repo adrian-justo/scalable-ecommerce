@@ -1,0 +1,28 @@
+[
+  {
+    "buyerId": "client123",
+    "products": [
+      {
+        "productId": 1,
+        "quantity": 2
+      },
+      {
+        "productId": 2,
+        "quantity": 3
+      }
+    ]
+  },
+  {
+    "buyerId": "buyer001",
+    "products": [
+      {
+        "productId": 3,
+        "quantity": 2
+      },
+      {
+        "productId": 4,
+        "quantity": 1
+      }
+    ]
+  }
+]

@@ -27,6 +27,11 @@ class AccountExceptionHandler {
 		return getDetail(HttpStatus.NOT_FOUND, e.getResource() + AppConstants.MSG_NOT_FOUND);
 	}
 
+	@ExceptionHandler(ResourceAccessDeniedException.class)
+	ProblemDetail handle(final ResourceAccessDeniedException e) {
+		return getDetail(HttpStatus.NOT_FOUND, AppConstants.MSG_ACCESS_DENIED + e.getResource());
+	}
+
 	@ExceptionHandler(AlreadyRegisteredException.class)
 	ProblemDetail handle(final AlreadyRegisteredException e) {
 		return getDetail(HttpStatus.CONFLICT, AppConstants.MSG_CONFLICT, e.getErrors());

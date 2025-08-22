@@ -27,7 +27,8 @@ public final class ProblemDetailUtils {
 		return problemDetail;
 	}
 
-	public static Mono<Void> write(final ServerWebExchange exchange, final HttpStatus status, final String title) {
+	public static Mono<Void> write(final ServerWebExchange exchange, final HttpStatus status, final String title,
+			final ObjectMapper mapper) {
 		final var response = exchange.getResponse();
 		response.setStatusCode(status);
 		response.getHeaders().setContentType(MediaType.APPLICATION_PROBLEM_JSON);
@@ -36,7 +37,7 @@ public final class ProblemDetailUtils {
 		detail.setInstance(URI.create(exchange.getRequest().getURI().getPath()));
 		var bytes = new byte[0];
 		try {
-			bytes = new ObjectMapper().writeValueAsBytes(detail);
+			bytes = mapper.writeValueAsBytes(detail);
 		}
 		catch (final JsonProcessingException e) {
 			e.printStackTrace();

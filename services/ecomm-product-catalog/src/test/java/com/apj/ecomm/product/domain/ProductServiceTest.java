@@ -29,6 +29,7 @@ import com.apj.ecomm.product.constants.AppConstants;
 import com.apj.ecomm.product.domain.model.CreateProductRequest;
 import com.apj.ecomm.product.domain.model.Paged;
 import com.apj.ecomm.product.domain.model.UpdateProductRequest;
+import com.apj.ecomm.product.web.exception.ResourceAccessDeniedException;
 import com.apj.ecomm.product.web.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -86,8 +87,8 @@ class ProductServiceTest {
 	}
 
 	@Test
-	void save() {
-		final var request = new CreateProductRequest("name", "description", Set.of(AppConstants.IMAGE_DEFAULT),
+	void list() {
+		final var request = new CreateProductRequest("name", "description", List.of(AppConstants.IMAGE_DEFAULT),
 				Set.of("category"), 1, BigDecimal.ONE);
 		final var product = mapper.toEntity(request);
 		when(repository.save(any())).thenReturn(product);
@@ -95,7 +96,7 @@ class ProductServiceTest {
 	}
 
 	@Test
-	void update() {
+	void update_success() {
 		final var request = new UpdateProductRequest(null, "description", null, null, 1, BigDecimal.ONE);
 		final var existing = products.get(0);
 		final var product = mapper.updateEntity(request, existing);
@@ -104,6 +105,13 @@ class ProductServiceTest {
 		when(repository.save(any())).thenReturn(product);
 
 		assertEquals(mapper.toResponse(product), service.update(1, "SHP001", request));
+	}
+
+	@Test
+	void update_accessDenied() {
+		final var request = new UpdateProductRequest(null, "description", null, null, 1, BigDecimal.ONE);
+		when(repository.findById(anyLong())).thenReturn(Optional.empty());
+		assertThrows(ResourceAccessDeniedException.class, () -> service.update(1, "SHP001", request));
 	}
 
 	@Test
@@ -122,6 +130,12 @@ class ProductServiceTest {
 		when(repository.save(any())).thenReturn(product);
 
 		assertEquals(mapper.toResponse(product), service.update("New Shop Name", 1L));
+	}
+
+	@Test
+	void updateShopName_notFound() {
+		when(repository.findById(anyLong())).thenReturn(Optional.empty());
+		assertThrows(ResourceNotFoundException.class, () -> service.update("New Shop Name", 1L));
 	}
 
 }
