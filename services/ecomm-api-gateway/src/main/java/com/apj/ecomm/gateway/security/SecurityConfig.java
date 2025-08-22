@@ -17,6 +17,7 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 import com.apj.ecomm.gateway.constants.Paths;
 import com.apj.ecomm.gateway.constants.Role;
 import com.apj.ecomm.gateway.util.ProblemDetailUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +26,8 @@ import lombok.RequiredArgsConstructor;
 @EnableConfigurationProperties(Paths.class)
 @RequiredArgsConstructor
 class SecurityConfig {
+
+	private final ObjectMapper mapper;
 
 	private final Paths paths;
 
@@ -36,24 +39,20 @@ class SecurityConfig {
 	SecurityWebFilterChain securityWebFilterChain(final ServerHttpSecurity http) {
 		return http.csrf(ServerHttpSecurity.CsrfSpec::disable).exceptionHandling(custom -> {
 			custom.authenticationEntryPoint((exchange, ex) -> ProblemDetailUtils.write(exchange,
-					HttpStatus.UNAUTHORIZED, "Token is invalid / Session has expired"));
+					HttpStatus.UNAUTHORIZED, "Token is invalid / Session has expired", mapper));
 			custom.accessDeniedHandler((exchange, ex) -> ProblemDetailUtils.write(exchange, HttpStatus.FORBIDDEN,
-					"Access to this resource is forbidden"));
+					"Access to this resource is forbidden", mapper));
 		})
 			.authorizeExchange(auth -> auth.pathMatchers(convert(paths.permitted()))
 				.permitAll()
 				.pathMatchers(HttpMethod.GET, convert(paths.getOnly()))
 				.permitAll()
-				.pathMatchers(convert(paths.adminOnly()))
-				.hasRole(Role.ADMIN.name())
 				.pathMatchers(convert(paths.buyerOnly()))
 				.hasRole(Role.BUYER.name())
 				.pathMatchers(convert(paths.sellerOnly()))
 				.hasRole(Role.SELLER.name())
-				.pathMatchers(convert(paths.nonSeller()))
-				.hasAnyRole(Role.ADMIN.name(), Role.BUYER.name())
-				.pathMatchers(convert(paths.nonBuyer()))
-				.hasAnyRole(Role.ADMIN.name(), Role.SELLER.name())
+				.pathMatchers(convert(paths.adminOnly()))
+				.hasRole(Role.ADMIN.name())
 				.pathMatchers(convert(paths.userBased()))
 				.access(ubRestriction)
 				.anyExchange()

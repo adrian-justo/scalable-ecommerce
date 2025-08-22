@@ -49,15 +49,14 @@ public class OpenAPIConfig {
 	OpenApiCustomizer pathPrefixRemover(final String path) {
 		return openApi -> {
 			final var paths = openApi.getPaths();
-			final var keySet = paths.keySet().toArray(new String[0]); // To avoid
-																		// ConcurrentModificationException
-
+			// To avoid ConcurrentModificationException
+			final var keySet = paths.keySet().toArray(new String[0]);
 			for (final String key : keySet) {
 				paths.put(key.replace(path, ""), paths.get(key));
 				paths.remove(key);
 			}
 
-			final var server = openApi.getServers().get(0);
+			final var server = openApi.getServers().getFirst();
 			server.setUrl(server.getUrl() + path);
 		};
 	}

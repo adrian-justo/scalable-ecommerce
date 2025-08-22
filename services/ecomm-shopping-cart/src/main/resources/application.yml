@@ -1,0 +1,67 @@
+spring:
+  application:
+    name: "@project.name@"
+    version: "@project.version@"
+  config:
+    import: 'optional:configserver:'
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  datasource:
+    url: jdbc:postgresql://host.docker.internal:5434/carts_db
+    username: user
+    password: pass
+  jpa:
+    database: POSTGRESQL
+    show-sql: true
+    properties:
+      '[hibernate.format_sql]': true
+  cloud:
+    function.definition: createIfNotExist
+    stream.bindings:
+      createIfNotExist-in-0:
+        destination: ${Q_CRT_CREATE_INE:cart-create-if-not-exist}
+#  docker.compose:
+#    lifecycle-management: none
+#  cloud.refresh:
+#    extra-refreshable: com.zaxxer.hikari.HikariDataSource
+
+server.port: 8085
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client.service-url:
+    defaultZone: ${EUREKA_SERVER:http://localhost:8082/eureka/}
+
+logging.level:
+  '[org.hibernate.orm.jdbc.bind]': trace
+
+management:
+  endpoints.web:
+    exposure.include: '*'
+  endpoint.health:
+    show-details: always
+  metrics.distribution.percentiles-histogram:
+    '[http.server.requests]': true
+  observations.key-values:
+    application: ${spring.application.name}
+  tracing:
+    sampling.probability: 1.0
+  otlp.tracing:
+    endpoint: http://localhost:4317
+    transport: grpc
+
+springdoc:
+  swagger-ui:
+    path: /docs/carts
+  api-docs:
+    path: /docs/carts/api
+
+application.description: "@project.description@"
+gateway.url: ${API_GATEWAY:http://localhost:8080}
+api.version: /api/v1
+carts.path: /carts
+products.path: /products

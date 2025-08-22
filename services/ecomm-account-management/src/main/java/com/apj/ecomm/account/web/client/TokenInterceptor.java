@@ -1,4 +1,4 @@
-package com.apj.ecomm.account.web.messaging;
+package com.apj.ecomm.account.web.client;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.context.request.RequestContextHolder;

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.PageRequest;
@@ -51,7 +52,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class ProductControllerTest {
 
-	private final String uri = "/api/v1/products";
+	@Value("${api.version}${products.path}")
+	private String uri;
 
 	private List<ProductResponse> response;
 
@@ -116,13 +118,13 @@ class ProductControllerTest {
 	void listProduct_success() throws Exception {
 		final var shopId = "SHP001";
 		final var shopName = "Shop Name";
-		final var request = new CreateProductRequest("name", "description", Set.of(AppConstants.IMAGE_DEFAULT),
+		final var request = new CreateProductRequest("name", "description", List.of(AppConstants.IMAGE_DEFAULT),
 				Set.of("category"), 1, BigDecimal.ONE);
 		final var productResponse = new ProductResponse(5L, request.name(), shopId, shopName, request.description(),
 				request.images(), request.categories(), request.stock(), request.price());
 
 		when(service.list(anyString(), anyString(), any(CreateProductRequest.class))).thenReturn(productResponse);
-		final var action = mvc.perform(post(uri).header(AppConstants.HEADER_SHOP_ID, shopId)
+		final var action = mvc.perform(post(uri).header(AppConstants.HEADER_USER_ID, shopId)
 			.header(AppConstants.HEADER_SHOP_NAME, shopName)
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)));
@@ -134,7 +136,7 @@ class ProductControllerTest {
 
 	@Test
 	void listProduct_missingHeader() throws Exception {
-		final var request = new CreateProductRequest("name", "description", Set.of(AppConstants.IMAGE_DEFAULT),
+		final var request = new CreateProductRequest("name", "description", List.of(AppConstants.IMAGE_DEFAULT),
 				Set.of("category"), 1, BigDecimal.ONE);
 
 		mvc.perform(post(uri).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)))
@@ -143,10 +145,10 @@ class ProductControllerTest {
 
 	@Test
 	void listProduct_invalid() throws Exception {
-		final var request = new CreateProductRequest("", "description", Set.of(AppConstants.IMAGE_DEFAULT),
+		final var request = new CreateProductRequest("", "description", List.of(AppConstants.IMAGE_DEFAULT),
 				Set.of("category"), 0, new BigDecimal("0.009"));
 
-		mvc.perform(post(uri).header(AppConstants.HEADER_SHOP_ID, "SHP001")
+		mvc.perform(post(uri).header(AppConstants.HEADER_USER_ID, "SHP001")
 			.header(AppConstants.HEADER_SHOP_NAME, "Shop Name")
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)))
@@ -161,7 +163,7 @@ class ProductControllerTest {
 				request.description(), existing.images(), existing.categories(), request.stock(), request.price());
 
 		when(service.update(anyLong(), anyString(), any())).thenReturn(updated);
-		final var action = mvc.perform(put(uri + "/1").header(AppConstants.HEADER_SHOP_ID, "SHP001")
+		final var action = mvc.perform(put(uri + "/1").header(AppConstants.HEADER_USER_ID, "SHP001")
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)));
 
@@ -174,7 +176,7 @@ class ProductControllerTest {
 	void updateProduct_invalid() throws Exception {
 		final var request = new UpdateProductRequest("", "description", null, null, 1, BigDecimal.ONE);
 
-		mvc.perform(put(uri + "/1").header(AppConstants.HEADER_SHOP_ID, "SHP001")
+		mvc.perform(put(uri + "/1").header(AppConstants.HEADER_USER_ID, "SHP001")
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)))
 			.andExpect(result -> assertTrue(result.getResolvedException() instanceof RequestArgumentNotValidException));

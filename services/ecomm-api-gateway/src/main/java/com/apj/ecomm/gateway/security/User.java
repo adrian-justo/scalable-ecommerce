@@ -22,7 +22,7 @@ class User implements UserDetails {
 
 	private List<String> roles;
 
-	private String shopId;
+	private String userId;
 
 	private String shopName;
 

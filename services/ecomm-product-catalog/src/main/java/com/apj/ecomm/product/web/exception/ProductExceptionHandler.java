@@ -28,6 +28,11 @@ class ProductExceptionHandler {
 		return getDetail(HttpStatus.NOT_FOUND, e.getResource() + AppConstants.MSG_NOT_FOUND);
 	}
 
+	@ExceptionHandler(ResourceAccessDeniedException.class)
+	ProblemDetail handle(final ResourceAccessDeniedException e) {
+		return getDetail(HttpStatus.NOT_FOUND, AppConstants.MSG_ACCESS_DENIED + e.getResource());
+	}
+
 	@ExceptionHandler(MissingRequestHeaderException.class)
 	ProblemDetail handle(final MissingRequestHeaderException e) {
 		return getDetail(HttpStatus.BAD_REQUEST,

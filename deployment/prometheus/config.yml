@@ -23,3 +23,10 @@ scrape_configs:
       - targets: ['ecomm-product-catalog:8084']
         labels:
           application: 'Product Catalog Microservice'
+          
+  - job_name: 'ecomm-shopping-cart'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['ecomm-shopping-cart:8085']
+        labels:
+          application: 'Shopping Cart Microservice'

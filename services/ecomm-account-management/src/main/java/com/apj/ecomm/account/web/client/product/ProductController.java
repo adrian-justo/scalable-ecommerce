@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.apj.ecomm.account.constants.AppConstants;
 import com.apj.ecomm.account.domain.model.Paged;
-import com.apj.ecomm.account.web.exception.ResourceNotFoundException;
+import com.apj.ecomm.account.web.client.AccountClient;
+import com.apj.ecomm.account.web.exception.ResourceAccessDeniedException;
 import com.apj.ecomm.account.web.util.PathValidator;
 
 import io.micrometer.observation.annotation.Observed;
@@ -29,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 
 @Tag(name = "My Products", description = "Endpoints for viewing your products. Only a seller can access this endpoint")
 @RestController
-@RequestMapping("/api/v1/users/{username}/products")
+@RequestMapping("${api.version}${users.path}/{username}${products.path}")
 @SecurityScheme(name = "authToken", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
 @SecurityRequirement(name = "authToken")
 @Observed(name = "controller.user.product")
@@ -37,16 +38,16 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ProductController {
 
-	private final ProductClient client;
+	private final AccountClient client;
 
 	@Operation(summary = "Product Catalog", description = "View all my products")
-	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Product" + AppConstants.MSG_OK),
+	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Products" + AppConstants.MSG_OK),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content) })
 	@GetMapping
 	public Paged<ProductCatalog> getAllProductsOfSeller(@PathVariable final String username,
-			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_SHOP_ID) final String shopId,
-			@ParameterObject @PageableDefault(page = 0, size = 10, sort = { "stock" }) final Pageable pageable) {
+			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String shopId,
+			@ParameterObject @PageableDefault(page = 0, size = 10, sort = { "createdAt" }) final Pageable pageable) {
 		PathValidator.username(username);
 		return client.getAllProducts("stock>0;shopId:" + shopId, pageable);
 	}
@@ -55,18 +56,20 @@ public class ProductController {
 	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Product" + AppConstants.MSG_OK),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
-			@ApiResponse(responseCode = "404", description = "Product" + AppConstants.MSG_NOT_FOUND,
+			@ApiResponse(responseCode = "404",
+					description = "Product" + AppConstants.MSG_NOT_FOUND + " / " + AppConstants.MSG_ACCESS_DENIED
+							+ "product",
 					content = @Content) })
 	@GetMapping("/{productId}")
 	public ProductResponse getProductOfSellerById(@PathVariable final String username,
-			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_SHOP_ID) final String shopId,
+			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String shopId,
 			@PathVariable final long productId) {
 		PathValidator.username(username);
 		PathValidator.productId(productId);
 
 		final var response = client.getProductById(productId);
 		if (!response.shopId().equals(shopId))
-			throw new ResourceNotFoundException("Product");
+			throw new ResourceAccessDeniedException("product");
 		return response;
 	}
 

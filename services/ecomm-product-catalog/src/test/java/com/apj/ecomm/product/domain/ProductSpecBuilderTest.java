@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +49,9 @@ class ProductSpecBuilderTest {
 	private Predicate predicate;
 
 	@Mock
+	private Predicate negated;
+
+	@Mock
 	private Predicate or;
 
 	@Mock
@@ -85,9 +89,37 @@ class ProductSpecBuilderTest {
 	}
 
 	@Test
+	void in() {
+		final var operation = ":";
+		var value = "1,2";
+
+		when(path.getJavaType()).thenReturn(Integer.class);
+		when(path.in(any(List.class))).thenReturn(predicate);
+
+		assertEquals(path.in(List.of("1", "2")),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
+
+		value = "aNyOne,aNyTwo";
+
+		when(path.getJavaType()).thenReturn(String.class);
+		when(builder.lower(any(Path.class))).thenReturn(expression);
+		when(expression.in(any(List.class))).thenReturn(predicate);
+
+		assertEquals(path.in(List.of("aNyOne", "aNyTwo")),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
+
+		value = "2025-01-01T00:00:00Z,2025-01-01T23:59:59Z";
+
+		when(path.getJavaType()).thenReturn(Instant.class);
+
+		assertEquals(path.in(List.of(Instant.parse("2025-01-01T00:00:00Z"), Instant.parse("2025-01-01T23:59:59Z"))),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
+	}
+
+	@Test
 	void equal() {
 		final var operation = ":";
-		var value = "aNy".toLowerCase();
+		var value = "aNy";
 
 		when(path.getJavaType()).thenReturn(Set.class);
 		when(builder.gt(any(Expression.class), anyInt())).thenReturn(predicate);
@@ -113,56 +145,15 @@ class ProductSpecBuilderTest {
 	}
 
 	@Test
-	void notEqual() {
-		final var operation = "!:";
-		var value = "aNy".toLowerCase();
-
-		when(path.getJavaType()).thenReturn(Set.class);
-		when(builder.equal(any(Expression.class), anyInt())).thenReturn(predicate);
-		when(builder.function(anyString(), any(Class.class), any(Expression.class), any())).thenReturn(expression);
-
-		assertEquals(builder.equal(expression, 0),
-				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
-
-		when(path.getJavaType()).thenReturn(String.class);
-		when(builder.lower(any(Path.class))).thenReturn(expression);
-		when(builder.notEqual(any(Expression.class), anyString())).thenReturn(predicate);
-
-		assertEquals(builder.notEqual(path, value),
-				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
-
-		value = "2025-01-01T23:59:59Z";
-
-		when(path.getJavaType()).thenReturn(Instant.class);
-		when(builder.notEqual(any(Path.class), any(Instant.class))).thenReturn(predicate);
-
-		assertEquals(builder.notEqual(path, Instant.parse(value)),
-				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
-	}
-
-	@Test
 	void like() {
 		final var operation = "%";
-		final var value = "aNy".toLowerCase();
+		final var value = "aNy";
 
 		when(path.getJavaType()).thenReturn(String.class);
 		when(builder.lower(any(Path.class))).thenReturn(expression);
 		when(builder.like(any(Expression.class), anyString())).thenReturn(predicate);
 
 		assertEquals(builder.like(path, value),
-				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
-	}
-
-	@Test
-	void notLike() {
-		final var operation = "!%";
-		final var value = "aNy".toLowerCase();
-
-		when(path.getJavaType()).thenReturn(String.class);
-		when(builder.lower(any(Path.class))).thenReturn(expression);
-		when(builder.notLike(any(Expression.class), anyString())).thenReturn(predicate);
-
-		assertEquals(builder.notLike(path, value),
 				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
 	}
 
@@ -223,6 +214,35 @@ class ProductSpecBuilderTest {
 					.build(field + operation + value + "|(" + field + operation + value + ";" + field + operation
 							+ value + ")")
 					.toPredicate(root, query, builder));
+	}
+
+	@Test
+	void not() {
+		final var operation = "!:";
+		var value = "aNy";
+
+		when(path.getJavaType()).thenReturn(Set.class);
+		when(builder.gt(any(Expression.class), anyInt())).thenReturn(predicate);
+		when(predicate.not()).thenReturn(negated);
+		when(builder.function(anyString(), any(Class.class), any(Expression.class), any())).thenReturn(expression);
+
+		assertEquals(builder.gt(expression, 0).not(),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
+
+		when(path.getJavaType()).thenReturn(String.class);
+		when(builder.lower(any(Path.class))).thenReturn(expression);
+		when(builder.equal(any(Expression.class), anyString())).thenReturn(predicate);
+
+		assertEquals(builder.equal(path, value).not(),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
+
+		value = "2025-01-01T23:59:59Z";
+
+		when(path.getJavaType()).thenReturn(Instant.class);
+		when(builder.equal(any(Path.class), any(Instant.class))).thenReturn(predicate);
+
+		assertEquals(builder.equal(path, Instant.parse(value)).not(),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
 	}
 
 }

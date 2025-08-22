@@ -1,11 +1,9 @@
 package com.apj.ecomm.product.domain;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +14,7 @@ import com.apj.ecomm.product.domain.model.Paged;
 import com.apj.ecomm.product.domain.model.ProductCatalog;
 import com.apj.ecomm.product.domain.model.ProductResponse;
 import com.apj.ecomm.product.domain.model.UpdateProductRequest;
+import com.apj.ecomm.product.web.exception.ResourceAccessDeniedException;
 import com.apj.ecomm.product.web.exception.ResourceNotFoundException;
 
 import io.micrometer.observation.annotation.Observed;
@@ -37,13 +36,7 @@ class ProductService implements IProductService {
 	@Cacheable(value = "catalog", unless = "#result.totalElements() < " + AppConstants.DEFAULT_PAGE_SIZE)
 	public Paged<ProductCatalog> findAll(String filter, final Pageable pageable) {
 		filter += filter.contains("stock") ? "" : ";stock>1";
-		final Page<ProductCatalog> result = repository.findAll(specBuilder.build(filter), pageable)
-			.map(mapper::toCatalog);
-
-		final var response = new Paged<>(result.getContent(), result.getNumber(), result.getSize(),
-				result.getTotalPages(), new ArrayList<>(), result.getTotalElements());
-		response.setSort(result.getSort());
-		return response;
+		return new Paged<>(repository.findAll(specBuilder.build(filter), pageable).map(mapper::toCatalog));
 	}
 
 	@Transactional(readOnly = true)
@@ -65,7 +58,7 @@ class ProductService implements IProductService {
 		return repository.findById(id)
 			.filter(p -> p.getShopId().equals(shopId))
 			.map(existing -> mapper.toResponse(repository.save(mapper.updateEntity(request, existing))))
-			.orElseThrow(ResourceNotFoundException::new);
+			.orElseThrow(ResourceAccessDeniedException::new);
 	}
 
 	public List<Long> getProductsBy(final String shopId) {

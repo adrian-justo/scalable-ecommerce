@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.cloud.contract.spec.internal.HttpStatus;
@@ -27,8 +28,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import com.apj.ecomm.product.constants.AppConstants;
 import com.apj.ecomm.product.domain.model.CreateProductRequest;
 import com.apj.ecomm.product.domain.model.ProductResponse;
-import com.apj.ecomm.product.domain.model.ShopNameUpdatedEvent;
 import com.apj.ecomm.product.domain.model.UpdateProductRequest;
+import com.apj.ecomm.product.web.messaging.ShopNameUpdatedEvent;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,6 +41,12 @@ import io.restassured.RestAssured;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
 		properties = { "eureka.client.enabled=false", "spring.cloud.config.enabled=false" })
 class EcommProductCatalogApplicationTests {
+
+	@Value("${api.version}")
+	private String apiVersion;
+
+	@Value("${products.path}")
+	private String path;
 
 	@LocalServerPort
 	private int port;
@@ -59,8 +66,6 @@ class EcommProductCatalogApplicationTests {
 	@Autowired
 	private InputDestination input;
 
-	private String apiVersion, path;
-
 	@BeforeAll
 	static void setUpBeforeClass() {
 		RestAssured.baseURI = "http://localhost";
@@ -68,8 +73,6 @@ class EcommProductCatalogApplicationTests {
 
 	@BeforeEach
 	void setUp() {
-		apiVersion = "/api/v1/";
-		path = "products";
 		RestAssured.port = port;
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 	}
@@ -91,15 +94,20 @@ class EcommProductCatalogApplicationTests {
 			.extract()
 			.body()
 			.asString();
+		final var cache = redisTemplate.keys("catalog::*")
+			.stream()
+			.map(key -> redisTemplate.opsForValue().get(key))
+			.toList()
+			.getFirst();
+
 		assertTrue(!getResponse.isEmpty());
 		// Disabled due to conditional caching based on result size.
-		// Update AppConstants.DEFAULT_PAGE_SIZE to the size of the get result to enable
-		// this assertion
-		// assertEquals(getResponse, redisTemplate.keys("catalog::*").stream()
-		// .map(key -> redisTemplate.opsForValue().get(key)).toList().getFirst(), true);
+		// Update AppConstants.DEFAULT_PAGE_SIZE to the size of
+		// the get result to enable this assertion.
+		// assertEquals(getResponse, cache, true);
 
 		final var createRequest = new CreateProductRequest("name", null, null, null, null, null);
-		final var createdResponse = given().header(AppConstants.HEADER_SHOP_ID, "SHP001")
+		final var createdResponse = given().header(AppConstants.HEADER_USER_ID, "SHP001")
 			.header(AppConstants.HEADER_SHOP_NAME, "Shop Name")
 			.contentType("application/json")
 			.body(mapper.writeValueAsString(createRequest))
@@ -123,7 +131,7 @@ class EcommProductCatalogApplicationTests {
 		assertEquals(createdResponse, cacheResponse, true);
 
 		final var updateRequest = new UpdateProductRequest(null, "description", null, null, 0, BigDecimal.ONE);
-		final var updatedResponse = given().header(AppConstants.HEADER_SHOP_ID, "SHP001")
+		final var updatedResponse = given().header(AppConstants.HEADER_USER_ID, "SHP001")
 			.contentType("application/json")
 			.body(mapper.writeValueAsString(updateRequest))
 			.when()

@@ -1,23 +1,21 @@
 package com.apj.ecomm.account.domain;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.apj.ecomm.account.domain.model.Paged;
-import com.apj.ecomm.account.domain.model.ShopNameUpdatedEvent;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
 import com.apj.ecomm.account.web.exception.ResourceNotFoundException;
+import com.apj.ecomm.account.web.messaging.ShopNameUpdatedEvent;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -38,12 +36,7 @@ class UserService implements IUserService {
 
 	@Transactional(readOnly = true)
 	public Paged<UserResponse> findAll(final Pageable pageable) {
-		final Page<UserResponse> result = repository.findAll(pageable).map(mapper::toFullResponse);
-
-		final var response = new Paged<>(result.getContent(), result.getNumber(), result.getSize(),
-				result.getTotalPages(), new ArrayList<>(), result.getTotalElements());
-		response.setSort(result.getSort());
-		return response;
+		return new Paged<>(repository.findAll(pageable).map(mapper::toFullResponse));
 	}
 
 	@Transactional(readOnly = true)

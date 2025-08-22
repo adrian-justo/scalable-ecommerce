@@ -121,3 +121,20 @@ services:
       product-postgres:
         condition: service_healthy
     <<: [*common-config, *health-chk]
+    
+  shopping-cart:
+    image: ${DOCKER_USERNAME}/ecomm-shopping-cart
+    container_name: ecomm-shopping-cart
+    ports: 
+      - "8085:8085"
+    environment:
+      <<: [*common-env, *config-id, *config-retry, *eureka, *redis]
+      SERVER_PORT: 8085
+      SPRING_CLOUD_CONFIG_NAME: database,monitoring
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-postgres:5432/carts_db
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      cart-postgres:
+        condition: service_healthy
+    <<: [*common-config, *health-chk]

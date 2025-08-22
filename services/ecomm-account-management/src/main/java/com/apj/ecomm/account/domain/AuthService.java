@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,6 +16,7 @@ import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
+import com.apj.ecomm.account.web.messaging.CreateCartEvent;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,8 @@ class AuthService implements IAuthService {
 	private final AuthenticationManager manager;
 
 	private final TokenService token;
+
+	private final ApplicationEventPublisher eventPublisher;
 
 	public UserResponse register(final CreateUserRequest request) {
 		return getUserByEither(request.username(), request.email(), request.mobileNo())
@@ -70,8 +74,13 @@ class AuthService implements IAuthService {
 	public String login(final LoginRequest request) {
 		final var auth = manager
 			.authenticate(new UsernamePasswordAuthenticationToken(request.identifier(), request.password()));
-		if (auth.isAuthenticated())
-			return token.generate((User) auth.getPrincipal());
+		if (auth.isAuthenticated()) {
+			final var user = (User) auth.getPrincipal();
+			if (user.getRoles().stream().anyMatch(role -> role.equals(Role.BUYER))) {
+				eventPublisher.publishEvent(new CreateCartEvent(user.getId().toString()));
+			}
+			return token.generate(user);
+		}
 		else
 			throw new BadCredentialsException("Credentials provided is incorrect");
 	}

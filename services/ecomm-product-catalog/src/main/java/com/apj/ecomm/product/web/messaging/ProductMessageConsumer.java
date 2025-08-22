@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.apj.ecomm.product.domain.IProductService;
-import com.apj.ecomm.product.domain.model.ShopNameUpdatedEvent;
 
 import lombok.RequiredArgsConstructor;
 

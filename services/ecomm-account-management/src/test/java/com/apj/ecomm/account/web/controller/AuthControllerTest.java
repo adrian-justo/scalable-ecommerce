@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -40,7 +41,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
-	private final String uri = "/api/v1/auth";
+	@Value("${api.version}${auth.path}")
+	private String uri;
 
 	private List<UserResponse> response;
 
@@ -70,7 +72,7 @@ class AuthControllerTest {
 				true);
 
 		when(service.register(any())).thenReturn(userResponse);
-		final var action = mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
+		final var action = mvc.perform(post(uri + "register").contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)));
 
 		final var jsonResponse = mapper.writeValueAsString(userResponse);
@@ -81,7 +83,7 @@ class AuthControllerTest {
 	@Test
 	void userRegistration_invalidDetails() throws Exception {
 		final var request = new CreateUserRequest("", "", "", "", "", "", null, null);
-		mvc.perform(post(uri + "/register").contentType(MediaType.APPLICATION_JSON)
+		mvc.perform(post(uri + "register").contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
 	}
 
@@ -119,8 +121,9 @@ class AuthControllerTest {
 		final var request = new LoginRequest(userResponse.username(), "password");
 
 		when(service.login(any())).thenReturn("jwt.token.here");
-		mvc.perform(post(uri + "/login").contentType(MediaType.APPLICATION_JSON)
-			.content(mapper.writeValueAsString(request))).andExpect(status().isOk());
+		mvc.perform(
+				post(uri + "login").contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(request)))
+			.andExpect(status().isOk());
 	}
 
 }

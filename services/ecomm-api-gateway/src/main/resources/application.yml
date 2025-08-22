@@ -11,17 +11,17 @@ paths:
   getOnly:
     - /api/*/products
     - /api/*/products/**
-  adminOnly:
-    - /api/*/users
   buyerOnly:
-    - ''
+    - /api/*/carts/buyer
+    - /api/*/carts/*/products
+    - /api/*/carts/*/products/**
   sellerOnly:
     - /api/*/products
     - /api/*/products/**
-  nonSeller:
-    - ''
-  nonBuyer:
-    - ''
+  adminOnly:
+    - /api/*/users
+    - /api/*/carts
+    - /api/*/carts/**
   userBased:
     - /api/*/users/**
 
@@ -68,11 +68,14 @@ spring:
         uri: lb://ECOMM-ACCOUNT-MANAGEMENT
         predicates:
           - Path=/api/*/users/**, /api/*/auth/**, /docs/users/**
-              
       - id: Product Catalog Service
         uri: lb://ECOMM-PRODUCT-CATALOG
         predicates:
           - Path=/api/*/products/**, /docs/products/**
+      - id: Shopping Cart Service
+        uri: lb://ECOMM-SHOPPING-CART
+        predicates:
+          - Path=/api/*/carts/**, /docs/carts/**
 
 springdoc.swagger-ui:
   path: /docs
@@ -83,6 +86,8 @@ springdoc.swagger-ui:
       url: /docs/users/api/auth
     - name: Product Catalog API
       url: /docs/products/api
+    - name: Shopping Cart API
+      url: /docs/carts/api
 
 server.port: 8080
 

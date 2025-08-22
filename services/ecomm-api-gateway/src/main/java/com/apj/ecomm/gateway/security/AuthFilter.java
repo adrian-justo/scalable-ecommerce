@@ -46,7 +46,7 @@ class AuthFilter implements WebFilter {
 
 		final var user = tokenService.getUser(token);
 		final var modifiedRequest = request.mutate()
-			.header("ecomm-shop-id", user.getShopId())
+			.header("ecomm-user-id", user.getUserId())
 			.header("ecomm-shop-name", user.getShopName())
 			.build();
 		final var modifiedExchange = exchange.mutate().request(modifiedRequest).build();

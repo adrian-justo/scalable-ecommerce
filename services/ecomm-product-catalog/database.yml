@@ -4,8 +4,8 @@ services:
     container_name: product-postgres
     environment:
       POSTGRES_DB: products_db
-      POSTGRES_USER: ${ACCOUNT_PG_USER:-user}
-      POSTGRES_PASSWORD: ${ACCOUNT_PG_PASSWORD:-pass}
+      POSTGRES_USER: ${PRODUCT_PG_USER:-user}
+      POSTGRES_PASSWORD: ${PRODUCT_PG_PASSWORD:-pass}
     ports:
       - 5433:5432
     restart: unless-stopped

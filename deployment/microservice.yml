@@ -93,3 +93,17 @@ services:
       - api-gateway
       - product-postgres
     <<: *common-config
+    
+  shopping-cart:
+    build: ../services/ecomm-shopping-cart
+    container_name: ecomm-shopping-cart
+    ports: 
+      - "8085:8085"
+    environment:
+      <<: [*common-env, *config-disable, *eureka, *redis]
+      SERVER_PORT: 8085
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-postgres:5432/carts_db
+    depends_on:
+      - api-gateway
+      - cart-postgres
+    <<: *common-config
