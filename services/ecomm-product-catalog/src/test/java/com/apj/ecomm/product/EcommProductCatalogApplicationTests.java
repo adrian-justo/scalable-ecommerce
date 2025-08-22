@@ -94,17 +94,13 @@ class EcommProductCatalogApplicationTests {
 			.extract()
 			.body()
 			.asString();
-		final var cache = redisTemplate.keys("catalog::*")
-			.stream()
-			.map(key -> redisTemplate.opsForValue().get(key))
-			.toList()
-			.getFirst();
 
 		assertTrue(!getResponse.isEmpty());
 		// Disabled due to conditional caching based on result size.
 		// Update AppConstants.DEFAULT_PAGE_SIZE to the size of
 		// the get result to enable this assertion.
-		// assertEquals(getResponse, cache, true);
+		// assertEquals(getResponse, redisTemplate.keys("catalog::*").stream().map(key ->
+		// redisTemplate.opsForValue().get(key)).toList().getFirst(), true);
 
 		final var createRequest = new CreateProductRequest("name", null, null, null, null, null);
 		final var createdResponse = given().header(AppConstants.HEADER_USER_ID, "SHP001")
