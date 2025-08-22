@@ -102,7 +102,7 @@ services:
     environment:
       <<: [*common-env, *config-disable, *eureka, *redis]
       SERVER_PORT: 8085
-      SPRING_DATASOURCE_URL: jdbc:postgresql://product-postgres:5432/carts_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://cart-postgres:5432/carts_db
     depends_on:
       - api-gateway
       - cart-postgres
