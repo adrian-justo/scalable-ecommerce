@@ -29,12 +29,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.apj.ecomm.account.constants.AppConstants;
 import com.apj.ecomm.account.domain.IUserService;
 import com.apj.ecomm.account.domain.Role;
 import com.apj.ecomm.account.domain.model.Paged;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.RequestArgumentNotValidException;
+import com.apj.ecomm.account.web.util.RequestValidator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,7 +65,8 @@ class UserControllerTest {
 	void setUp() throws IOException {
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {});
+			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
+			});
 		}
 
 	}
@@ -82,10 +85,10 @@ class UserControllerTest {
 
 	@Test
 	void accountDetails_getSpecific() throws Exception {
-		final var userResponse = response.get(0);
+		final var userResponse = response.getFirst();
 
-		when(service.findByUsername(anyString())).thenReturn(userResponse);
-		final var action = mvc.perform(get(uri + "/admin123"));
+		when(service.findByUsername(anyString(), anyString())).thenReturn(userResponse);
+		final var action = mvc.perform(get(uri + "/admin123").header(AppConstants.HEADER_USER_ID, ""));
 
 		final var jsonResponse = mapper.writeValueAsString(userResponse);
 		action.andExpect(status().isOk()).andExpect(content().json(jsonResponse));
@@ -96,7 +99,7 @@ class UserControllerTest {
 	void accountManagement_success() throws Exception {
 		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null, null,
 				null);
-		final var user = response.get(0);
+		final var user = response.getFirst();
 		final var userResponse = new UserResponse(user.id(), user.username(), request.email(), request.mobileNo(),
 				user.name(), user.shopName(), user.address(), user.roles(), user.notificationTypes(), user.createdAt(),
 				user.updatedAt(), user.active());
@@ -120,28 +123,28 @@ class UserControllerTest {
 	@Test
 	void accountManagement_emailSmsMissing() {
 		final var request = new UpdateUserRequest("", "", null, null, null, null, null, null);
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test
 	void accountManagement_invalidRole() {
 		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
 				Set.of(Role.ADMIN, Role.BUYER), null);
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test
 	void accountManagement_seller_noShopName() {
 		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null,
 				Set.of(Role.SELLER), null);
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test
 	void accountManagement_invalidNotificationType() {
 		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null, null,
 				Set.of());
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test

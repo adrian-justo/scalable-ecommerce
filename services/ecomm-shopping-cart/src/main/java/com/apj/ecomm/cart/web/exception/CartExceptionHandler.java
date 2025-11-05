@@ -28,11 +28,6 @@ class CartExceptionHandler {
 		return getDetail(HttpStatus.NOT_FOUND, e.getResource() + AppConstants.MSG_NOT_FOUND);
 	}
 
-	@ExceptionHandler(ResourceAccessDeniedException.class)
-	ProblemDetail handle(final ResourceAccessDeniedException e) {
-		return getDetail(HttpStatus.NOT_FOUND, AppConstants.MSG_ACCESS_DENIED + e.getResource());
-	}
-
 	@ExceptionHandler(MissingRequestHeaderException.class)
 	ProblemDetail handle(final MissingRequestHeaderException e) {
 		return getDetail(HttpStatus.BAD_REQUEST,
@@ -46,6 +41,7 @@ class CartExceptionHandler {
 					.stream()
 					.map(ParameterValidationResult::getResolvableErrors)
 					.flatMap(List::stream)
+					.filter(FieldError.class::isInstance)
 					.map(FieldError.class::cast)
 					.collect(Collectors.groupingBy(FieldError::getField,
 							Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList()))));

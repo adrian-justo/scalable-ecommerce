@@ -33,7 +33,7 @@ class ProductSpecBuilder {
 			final var productSpec = new ProductSpec(key, operation, value);
 			if (StringUtils.isBlank(conjunction))
 				return productSpec;
-			else // reversed because of and precedence over or
+			else // reversed because AND operations take precedence over OR operations
 				return conjunction.equals("|") ? productSpec.or(spec) : spec.and(productSpec);
 		}
 		else if (StringUtils.isBlank(conjunction))

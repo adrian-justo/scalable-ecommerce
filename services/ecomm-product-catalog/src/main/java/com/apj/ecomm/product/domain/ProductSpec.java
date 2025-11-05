@@ -3,6 +3,7 @@ package com.apj.ecomm.product.domain;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.stream.Stream;
 
 import org.springframework.data.jpa.domain.Specification;
 
@@ -34,23 +35,20 @@ class ProductSpec implements Specification<Product> {
 	}
 
 	private Predicate getPredicate(final Root<Product> root, final CriteriaBuilder builder, final String operation) {
-		final var fieldIsInstant = Instant.class.isAssignableFrom(root.get(field).getJavaType());
+		final var type = root.get(field).getJavaType();
+		final var fieldIsInstant = isInstant(type);
+
 		if (value.contains("->")) {
 			final var values = value.split("->");
 			return fieldIsInstant ? builder.between(root.get(field), Instant.parse(values[0]), Instant.parse(values[1]))
 					: builder.between(root.get(field), values[0], values[1]);
 		}
-		else if (value.contains(",")) {
-			final var values = value.split(",");
-			return lowerIfString(root.get(field), builder)
-				.in(fieldIsInstant ? Arrays.stream(values).map(Instant::parse).toList()
-						: Arrays.stream(values).map(String::toLowerCase).toList());
-		}
+		else if (value.contains(","))
+			return lowerIfString(root.get(field), builder).in(valueBy(type, Arrays.stream(value.split(","))).toList());
 
-		final var fieldIsCollection = Collection.class.isAssignableFrom(root.get(field).getJavaType());
 		return switch (operation.replace("!", "")) {
-			case ":" -> fieldIsCollection ? builder.gt(arrayPosition(root, builder), 0)
-					: builder.equal(lowerIfString(root.get(field), builder), parseIf(fieldIsInstant, value));
+			case ":" -> Collection.class.isAssignableFrom(type) ? builder.gt(arrayPosition(root, builder), 0)
+					: builder.equal(lowerIfString(root.get(field), builder), valueBy(type));
 			case "%" -> builder.like(lowerIfString(root.get(field), builder), "%" + value.toLowerCase() + "%");
 			case "<" -> fieldIsInstant ? builder.lessThanOrEqualTo(root.get(field), Instant.parse(value))
 					: builder.lessThanOrEqualTo(root.get(field), value);
@@ -68,8 +66,31 @@ class ProductSpec implements Specification<Product> {
 		return String.class.isAssignableFrom(path.getJavaType()) ? builder.lower(path) : path;
 	}
 
-	private Object parseIf(final boolean fieldIsInstant, final String value) {
-		return fieldIsInstant ? Instant.parse(value) : value.toLowerCase();
+	private Object valueBy(final Class<?> type) {
+		if (isInstant(type))
+			return Instant.parse(value);
+		else if (isBoolean(type))
+			return Boolean.valueOf(value);
+		else
+			return value.toLowerCase();
+	}
+
+	private Stream<?> valueBy(final Class<?> type, final Stream<String> values) {
+		if (isInstant(type))
+			return values.map(Instant::parse);
+		else if (isBoolean(type))
+			return values.map(Boolean::valueOf);
+		else
+			return values.map(String::toLowerCase);
+
+	}
+
+	private boolean isInstant(final Class<?> field) {
+		return Instant.class.isAssignableFrom(field);
+	}
+
+	private boolean isBoolean(final Class<?> field) {
+		return Boolean.class.isAssignableFrom(field);
 	}
 
 }

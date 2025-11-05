@@ -1,5 +1,10 @@
 package com.apj.ecomm.cart.domain.model;
 
-public record CartItemResponse(Long productId, Integer quantity) {
+import java.time.Instant;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public record CartItemResponse(Long id, Long productId, String shopId, Integer quantity, Instant createdAt,
+		Instant updatedAt) {
 }

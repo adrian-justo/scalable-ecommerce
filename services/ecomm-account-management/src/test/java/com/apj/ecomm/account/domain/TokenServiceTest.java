@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class TokenServiceTest {
 
-	private List<User> users;
+	private User user;
 
 	@InjectMocks
 	private TokenService service;
@@ -34,14 +34,15 @@ class TokenServiceTest {
 		final var objMap = new ObjectMapper();
 		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			users = objMap.readValue(inputStream, new TypeReference<List<User>>() {});
+			final var users = objMap.readValue(inputStream, new TypeReference<List<User>>() {
+			});
+			user = users.getFirst();
+			user.setId(UUID.randomUUID());
 		}
 	}
 
 	@Test
 	void generationSuccessful() {
-		final var user = users.get(0);
-		user.setId(UUID.randomUUID());
 		assertFalse(service.generate(user).isBlank());
 	}
 

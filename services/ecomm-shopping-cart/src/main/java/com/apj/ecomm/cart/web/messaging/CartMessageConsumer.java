@@ -20,4 +20,9 @@ public class CartMessageConsumer {
 		return data -> service.createCart(data.buyerId());
 	}
 
+	@Bean
+	Consumer<UpdateCartItemsEvent> updateCartItems() {
+		return data -> service.updateItemsFromEvent(data.buyerId(), data.products());
+	}
+
 }

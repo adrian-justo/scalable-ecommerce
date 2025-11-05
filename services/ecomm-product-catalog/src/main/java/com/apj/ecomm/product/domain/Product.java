@@ -63,4 +63,15 @@ class Product {
 	@UpdateTimestamp
 	private Instant updatedAt;
 
+	@Column(columnDefinition = "boolean default true")
+	private boolean active = true;
+
+	public void order(final Integer quantity) {
+		stock -= stock > quantity ? quantity : stock;
+	}
+
+	public void restock(final Integer quantity) {
+		stock += quantity;
+	}
+
 }

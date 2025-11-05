@@ -24,8 +24,7 @@ class CartDataLoader implements CommandLineRunner {
 	public void run(final String... args) throws Exception {
 		if (repository.count() == 0) {
 			try (var inputStream = TypeReference.class.getResourceAsStream("/data/carts.json")) {
-				repository.saveAll(mapper.readValue(inputStream, new TypeReference<List<Cart>>() {
-				}));
+				repository.saveAll(mapper.readValue(inputStream, new TypeReference<List<Cart>>() {}));
 			}
 		}
 

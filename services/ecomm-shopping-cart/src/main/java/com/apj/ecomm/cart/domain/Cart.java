@@ -41,13 +41,14 @@ class Cart {
 	@OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
 	private List<CartItem> products = new ArrayList<>();
 
-	private boolean ordered;
-
 	@CreationTimestamp
 	private Instant createdAt;
 
 	@UpdateTimestamp
 	private Instant updatedAt;
+
+	@Column(columnDefinition = "boolean default true")
+	private boolean active = true;
 
 	public void setProducts(final List<CartItem> products) {
 		products.forEach(p -> p.setCart(this));

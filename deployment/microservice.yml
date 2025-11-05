@@ -107,3 +107,17 @@ services:
       - api-gateway
       - cart-postgres
     <<: *common-config
+    
+  order-management:
+    build: ../services/ecomm-order-management
+    container_name: ecomm-order-management
+    ports: 
+      - "8086:8086"
+    environment:
+      <<: [*common-env, *config-disable, *eureka, *redis]
+      SERVER_PORT: 8086
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-postgres:5432/orders_db
+    depends_on:
+      - api-gateway
+      - order-postgres
+    <<: *common-config

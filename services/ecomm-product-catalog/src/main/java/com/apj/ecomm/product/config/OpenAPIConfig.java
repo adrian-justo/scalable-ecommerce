@@ -24,13 +24,11 @@ public class OpenAPIConfig {
 	}
 
 	@Bean
-	OpenApiCustomizer pathPrefixRemover(@Value("${api.version}") final String apiVersion,
-			@Value("${products.path}") final String basePath) {
+	OpenApiCustomizer pathPrefixRemover(@Value("${api.version}${products.path}") final String path) {
 		return openApi -> {
 			final var paths = openApi.getPaths();
 			// To avoid ConcurrentModificationException
 			final var keySet = paths.keySet().toArray(new String[0]);
-			final var path = apiVersion + basePath;
 
 			for (final String key : keySet) {
 				paths.put(key.replace(path, ""), paths.get(key));

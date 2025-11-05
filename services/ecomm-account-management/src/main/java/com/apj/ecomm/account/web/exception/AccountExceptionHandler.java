@@ -42,6 +42,11 @@ class AccountExceptionHandler {
 		return getDetail(HttpStatus.UNAUTHORIZED, AppConstants.MSG_UNAUTHORIZED);
 	}
 
+	@ExceptionHandler(ActiveOrderExistsException.class)
+	ProblemDetail handle(final ActiveOrderExistsException e) {
+		return getDetail(HttpStatus.UNPROCESSABLE_ENTITY, AppConstants.MSG_UNPROCESSABLE_ENTITY);
+	}
+
 	@ExceptionHandler(MissingRequestHeaderException.class)
 	ProblemDetail handle(final MissingRequestHeaderException e) {
 		return getDetail(HttpStatus.BAD_REQUEST,

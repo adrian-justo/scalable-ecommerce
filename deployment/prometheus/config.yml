@@ -30,3 +30,10 @@ scrape_configs:
       - targets: ['ecomm-shopping-cart:8085']
         labels:
           application: 'Shopping Cart Microservice'
+          
+  - job_name: 'ecomm-order-management'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['ecomm-order-management:8086']
+        labels:
+          application: 'Order Management Microservice'

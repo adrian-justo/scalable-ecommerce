@@ -12,16 +12,17 @@ paths:
     - /api/*/products
     - /api/*/products/**
   buyerOnly:
-    - /api/*/carts/buyer
-    - /api/*/carts/*/products
-    - /api/*/carts/*/products/**
+    - /api/*/carts
+    - /api/*/carts/**
+    - /api/*/orders
+    - /api/*/orders/**
   sellerOnly:
     - /api/*/products
     - /api/*/products/**
+    - /api/*/shop/**
   adminOnly:
     - /api/*/users
-    - /api/*/carts
-    - /api/*/carts/**
+    - /api/*/admin/**
   userBased:
     - /api/*/users/**
 
@@ -67,7 +68,7 @@ spring:
       - id: Account Management Service
         uri: lb://ECOMM-ACCOUNT-MANAGEMENT
         predicates:
-          - Path=/api/*/users/**, /api/*/auth/**, /docs/users/**
+          - Path=/api/*/auth/**, /api/*/users/**, /docs/users/**
       - id: Product Catalog Service
         uri: lb://ECOMM-PRODUCT-CATALOG
         predicates:
@@ -75,19 +76,27 @@ spring:
       - id: Shopping Cart Service
         uri: lb://ECOMM-SHOPPING-CART
         predicates:
-          - Path=/api/*/carts/**, /docs/carts/**
+          - Path=/api/*/admin/carts/**, /api/*/carts/**, /docs/carts/**
+      - id: Order Management Service
+        uri: lb://ECOMM-ORDER-MANAGEMENT
+        predicates:
+          - Path=/api/*/admin/orders/**, /api/*/shop/orders/**, /api/*/orders/**, /docs/orders/**
 
 springdoc.swagger-ui:
   path: /docs
   urls:
-    - name: Account Management API
-      url: /docs/users/api/acctmgt
     - name: Authentication API
       url: /docs/users/api/auth
+    - name: Account Management API
+      url: /docs/users/api/acctmgt
     - name: Product Catalog API
       url: /docs/products/api
     - name: Shopping Cart API
-      url: /docs/carts/api
+      url: /docs/carts/api/shpcrt
+    - name: Order API
+      url: /docs/orders/api/checkout
+    - name: Order Fulfillment API
+      url: /docs/orders/api/fulfill
 
 server.port: 8080
 

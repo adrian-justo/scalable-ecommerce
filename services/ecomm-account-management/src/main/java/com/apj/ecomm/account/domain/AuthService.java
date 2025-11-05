@@ -17,6 +17,8 @@ import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
 import com.apj.ecomm.account.web.messaging.CreateCartEvent;
+import com.apj.ecomm.account.web.messaging.ShopNameUpdatedEvent;
+import com.apj.ecomm.account.web.messaging.ShopStatusUpdatedEvent;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +31,6 @@ class AuthService implements IAuthService {
 
 	private final UserRepository repository;
 
-	private final UserMapper mapper;
-
 	private final PasswordEncoder encoder;
 
 	private final AuthenticationManager manager;
@@ -39,10 +39,14 @@ class AuthService implements IAuthService {
 
 	private final ApplicationEventPublisher eventPublisher;
 
+	private final UserMapper mapper;
+
 	public UserResponse register(final CreateUserRequest request) {
-		return getUserByEither(request.username(), request.email(), request.mobileNo())
-			.map(existing -> saveUser(mapper.updateEntity(request, existing), request))
-			.orElseGet(() -> saveUser(mapper.toEntity(request), request));
+		final var existing = getUserByEither(request.username(), request.email(), request.mobileNo());
+		if (existing.isEmpty())
+			return mapper.toResponse(repository.save(mapper.toEntity(request, encoder)));
+		else
+			return update(request, existing.get());
 	}
 
 	private Optional<User> getUserByEither(final String username, final String email, final String mobileNo) {
@@ -64,11 +68,22 @@ class AuthService implements IAuthService {
 		});
 	}
 
-	private UserResponse saveUser(final User user, final CreateUserRequest request) {
-		user.setNotificationTypes(getValidatedTypes(user, user.getNotificationTypes()));
-		user.setPassword(encoder.encode(request.password()));
+	private UserResponse update(final CreateUserRequest request, final User existing) {
+		final var shopName = request.shopName();
+		final var isShopNameUpdated = shopName != null && !shopName.equals(existing.getShopName());
+
+		final var user = mapper.updateEntity(request, existing, encoder);
 		user.setActive(true);
-		return mapper.toResponse(repository.save(user));
+		final var updated = repository.save(user);
+
+		if (updated.getRoles().contains(Role.SELLER)) {
+			eventPublisher.publishEvent(new ShopStatusUpdatedEvent(updated.getId().toString(), Boolean.TRUE));
+			if (isShopNameUpdated) {
+				final var shopId = mapper.toResponseNoIdentifier(updated).id();
+				eventPublisher.publishEvent(new ShopNameUpdatedEvent(shopId, shopName));
+			}
+		}
+		return mapper.toResponse(updated);
 	}
 
 	public String login(final LoginRequest request) {
@@ -76,7 +91,7 @@ class AuthService implements IAuthService {
 			.authenticate(new UsernamePasswordAuthenticationToken(request.identifier(), request.password()));
 		if (auth.isAuthenticated()) {
 			final var user = (User) auth.getPrincipal();
-			if (user.getRoles().stream().anyMatch(role -> role.equals(Role.BUYER))) {
+			if (user.getRoles().contains(Role.BUYER)) {
 				eventPublisher.publishEvent(new CreateCartEvent(user.getId().toString()));
 			}
 			return token.generate(user);

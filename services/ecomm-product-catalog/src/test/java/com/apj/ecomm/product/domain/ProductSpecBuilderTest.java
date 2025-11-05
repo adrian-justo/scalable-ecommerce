@@ -109,10 +109,13 @@ class ProductSpecBuilderTest {
 				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
 
 		value = "2025-01-01T00:00:00Z,2025-01-01T23:59:59Z";
-
 		when(path.getJavaType()).thenReturn(Instant.class);
-
 		assertEquals(path.in(List.of(Instant.parse("2025-01-01T00:00:00Z"), Instant.parse("2025-01-01T23:59:59Z"))),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
+
+		value = "true,false";
+		when(path.getJavaType()).thenReturn(Boolean.class);
+		assertEquals(path.in(List.of(Boolean.valueOf("true"), Boolean.valueOf("false"))),
 				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
 	}
 
@@ -141,6 +144,14 @@ class ProductSpecBuilderTest {
 		when(builder.equal(any(Path.class), any(Instant.class))).thenReturn(predicate);
 
 		assertEquals(builder.equal(path, Instant.parse(value)),
+				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
+
+		value = "true";
+
+		when(path.getJavaType()).thenReturn(Boolean.class);
+		when(builder.equal(any(Path.class), any(Boolean.class))).thenReturn(predicate);
+
+		assertEquals(builder.equal(path, Boolean.valueOf(value)),
 				specBuilder.build(field + operation + value).toPredicate(root, query, builder));
 	}
 

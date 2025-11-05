@@ -12,8 +12,9 @@ import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
+import org.springframework.integration.redis.util.RedisLockRegistry;
+import org.springframework.integration.redis.util.RedisLockRegistry.RedisLockType;
 
-import com.apj.ecomm.product.domain.model.ProductCatalog;
 import com.apj.ecomm.product.domain.model.ProductResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,27 +31,35 @@ public class CacheConfig {
 	@Bean
 	RedisCacheManager redisCacheManager(final RedisConnectionFactory conn) {
 		return RedisCacheManager.builder(conn)
-			.cacheDefaults(configWithTtl(5))
+			.cacheDefaults(configWithTtl(10))
 			.withInitialCacheConfigurations(
-					Map.of("catalog", configWithTtlFor(new TypeReference<List<ProductCatalog>>() {
-					}, 10), "product", configWithTtlFor(ProductResponse.class, 30)))
+					Map.of("catalog", configWithTtl(5, serializerFor(new TypeReference<List<Long>>() {
+					})), "product", configWithTtl(30, serializerFor(ProductResponse.class))))
 			.build();
+	}
+
+	private RedisCacheConfiguration configWithTtl(final long minutes, final Jackson2JsonRedisSerializer<?> serializer) {
+		return configWithTtl(minutes).disableCachingNullValues()
+			.serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(serializer));
 	}
 
 	private RedisCacheConfiguration configWithTtl(final long minutes) {
 		return RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(minutes));
 	}
 
-	private RedisCacheConfiguration configWithTtlFor(final TypeReference<?> type, final long minutes) {
-		return configWithTtl(minutes).disableCachingNullValues()
-			.serializeValuesWith(RedisSerializationContext.SerializationPair
-				.fromSerializer(new Jackson2JsonRedisSerializer<>(mapper.getTypeFactory().constructType(type))));
+	private Jackson2JsonRedisSerializer<?> serializerFor(final TypeReference<?> type) {
+		return new Jackson2JsonRedisSerializer<>(mapper.getTypeFactory().constructType(type));
 	}
 
-	private RedisCacheConfiguration configWithTtlFor(final Class<?> clazz, final long minutes) {
-		return configWithTtl(minutes).disableCachingNullValues()
-			.serializeValuesWith(RedisSerializationContext.SerializationPair
-				.fromSerializer(new Jackson2JsonRedisSerializer<>(clazz)));
+	private Jackson2JsonRedisSerializer<?> serializerFor(final Class<?> clazz) {
+		return new Jackson2JsonRedisSerializer<>(clazz);
+	}
+
+	@Bean
+	RedisLockRegistry redisLockRegistry(final RedisConnectionFactory conn) {
+		final var lockRegistry = new RedisLockRegistry(conn, "product-locks");
+		lockRegistry.setRedisLockType(RedisLockType.PUB_SUB_LOCK);
+		return lockRegistry;
 	}
 
 }

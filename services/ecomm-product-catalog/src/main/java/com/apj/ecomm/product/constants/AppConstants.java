@@ -32,8 +32,6 @@ public final class AppConstants {
 
 	public static final String MSG_VALUE_GT_EQ = "Value must be greater than or equal to ";
 
-	public static final int DEFAULT_PAGE_SIZE = 10;
-
 	public static final String HEADER_USER_ID = "ecomm-user-id";
 
 	public static final String HEADER_SHOP_NAME = "ecomm-shop-name";

@@ -1,0 +1,92 @@
+[
+  {
+    "buyerId": "client123",
+    "deliveryInformation": {
+      "name": "E-comm Client",
+      "address": "Address, City, State, Zip",
+      "email": "client123@mail.com",
+      "mobileNo": "+639021234567"
+    },
+    "shopId": "SHP002",
+    "shopInformation": {
+      "name": "Best Shop",
+      "address": "Block 1 Lot 2 Three St., Antipolo, Rizal, PH 1992",
+      "email": "seller001@mail.com",
+      "mobileNo": "+639087654322"
+    },
+    "products": [
+      {
+        "productId": 2,
+        "quantity": 1,
+        "productDetail": {
+          "image": "https://placehold.co/400",
+          "name": "Chanel Coco Noir Eau De",
+          "price": 129.99
+        }
+      },
+      {
+        "productId": 3,
+        "quantity": 1,
+        "productDetail": {
+          "image": "null",
+          "name": "Yellow Peeler",
+          "price": 0.01
+        }
+      }
+    ]
+  },
+  {
+    "buyerId": "buyer001",
+    "deliveryInformation": {
+      "name": "Buyer Name",
+      "address": "null",
+      "email": "buyer001@mail.com",
+      "mobileNo": "+639087654321"
+    },
+    "shopId": "SHP001",
+    "shopInformation": {
+      "name": "Shop Name",
+      "address": "Address, City, State, Zip",
+      "email": "client123@mail.com",
+      "mobileNo": "+639021234567"
+    },
+    "products": [
+      {
+        "productId": 4,
+        "quantity": 4,
+        "productDetail": {
+          "image": "https://placehold.co/500",
+          "name": "Apple Airpods",
+          "price": 129.99
+        }
+      }
+    ]
+  },
+  {
+    "buyerId": "buyer001",
+    "deliveryInformation": {
+      "name": "Buyer Name",
+      "address": "null",
+      "email": "buyer001@mail.com",
+      "mobileNo": "+639087654321"
+    },
+    "shopId": "SHP002",
+    "shopInformation": {
+      "name": "Best Shop",
+      "address": "Block 1 Lot 2 Three St., Antipolo, Rizal, PH 1992",
+      "email": "seller001@mail.com",
+      "mobileNo": "+639087654322"
+    },
+    "products": [
+      {
+        "productId": 3,
+        "quantity": 1,
+        "productDetail": {
+          "image": "null",
+          "name": "Yellow Peeler",
+          "price": 0.01
+        }
+      }
+    ]
+  }
+]

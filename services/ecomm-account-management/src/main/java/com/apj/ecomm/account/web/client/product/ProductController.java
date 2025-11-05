@@ -45,9 +45,9 @@ public class ProductController {
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content) })
 	@GetMapping
-	public Paged<ProductCatalog> getAllProductsOfSeller(@PathVariable final String username,
+	public Paged<ProductResponse> getAllProductsOfSeller(@PathVariable final String username,
 			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String shopId,
-			@ParameterObject @PageableDefault(page = 0, size = 10, sort = { "createdAt" }) final Pageable pageable) {
+			@ParameterObject @PageableDefault(page = 0, size = 10, sort = "createdAt") final Pageable pageable) {
 		PathValidator.username(username);
 		return client.getAllProducts("stock>0;shopId:" + shopId, pageable);
 	}

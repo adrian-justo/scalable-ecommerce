@@ -20,10 +20,10 @@ import com.apj.ecomm.product.constants.AppConstants;
 import com.apj.ecomm.product.domain.IProductService;
 import com.apj.ecomm.product.domain.model.CreateProductRequest;
 import com.apj.ecomm.product.domain.model.Paged;
-import com.apj.ecomm.product.domain.model.ProductCatalog;
 import com.apj.ecomm.product.domain.model.ProductResponse;
 import com.apj.ecomm.product.domain.model.UpdateProductRequest;
 import com.apj.ecomm.product.web.exception.ResourceNotFoundException;
+import com.apj.ecomm.product.web.util.Executor;
 
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
@@ -50,6 +50,8 @@ public class ProductController {
 
 	private final IProductService service;
 
+	private final Executor executor;
+
 	private static final String DESCRIPTION_FILTER = """
 			This filter is used to search products based on various criteria.
 			The filter can be a simple combination of a field, an operation and the value to compare with,
@@ -70,6 +72,7 @@ public class ProductController {
 			|price|number|
 			|createdAt|timestamp|
 			|updatedAt|timestamp|
+			|active|true/false|
 			<br><br>
 			|Symbol|Type|Description(Field Type Limitation)|Usage|
 			|--|--|--|--|
@@ -97,17 +100,18 @@ public class ProductController {
 	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Products" + AppConstants.MSG_OK),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content) })
 	@GetMapping
-	public Paged<ProductCatalog> getAllProducts(
+	public Paged<ProductResponse> getAllProducts(
 			@Parameter(description = DESCRIPTION_FILTER,
 					examples = {
 							@ExampleObject(name = "Simple", value = "name%airpods",
 									description = "`name` containing 'airpods'"),
 							@ExampleObject(name = "Combination", value = EXAMPLE_COMBINATION,
 									description = DESCRIPTION_EXAMPLE_COMBINATION) }) @RequestParam(
-											defaultValue = "stock>1") final String filter,
-			@ParameterObject @PageableDefault(page = 0, size = AppConstants.DEFAULT_PAGE_SIZE,
-					sort = { "price" }) final Pageable pageable) {
-		return service.findAll(filter, pageable);
+											defaultValue = "stock>1;active:true") final String filter,
+			@ParameterObject @PageableDefault(page = 0, size = 10, sort = "price") final Pageable pageable) {
+		final var productIds = service.findProductIds(filter, pageable);
+		final var products = productIds.stream().map(service::findById).toList();
+		return service.getPaged(products, pageable);
 	}
 
 	@Operation(summary = "Product Details", description = "View details of a specific product")
@@ -139,7 +143,9 @@ public class ProductController {
 	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Product updated successfully"),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
-			@ApiResponse(responseCode = "404", description = "Product" + AppConstants.MSG_NOT_FOUND+ " / " + AppConstants.MSG_ACCESS_DENIED + "product",
+			@ApiResponse(responseCode = "404",
+					description = "Product" + AppConstants.MSG_NOT_FOUND + " / " + AppConstants.MSG_ACCESS_DENIED
+							+ "product",
 					content = @Content) })
 	@PutMapping("/{productId}")
 	@SecurityRequirement(name = "authToken")
@@ -148,7 +154,7 @@ public class ProductController {
 			@RequestBody @Valid final UpdateProductRequest request) {
 		validate(productId);
 		request.validate();
-		return service.update(productId, shopId, request);
+		return executor.lockFor(productId, () -> service.update(productId, shopId, request));
 	}
 
 	private void validate(final long productId) {

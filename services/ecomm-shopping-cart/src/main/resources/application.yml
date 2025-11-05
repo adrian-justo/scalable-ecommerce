@@ -19,10 +19,12 @@ spring:
     properties:
       '[hibernate.format_sql]': true
   cloud:
-    function.definition: createIfNotExist
+    function.definition: createIfNotExist;updateCartItems
     stream.bindings:
       createIfNotExist-in-0:
         destination: ${Q_CRT_CREATE_INE:cart-create-if-not-exist}
+      updateCartItems-in-0:
+        destination: ${Q_CRT_UPDATE_IQ:cart-update-item-quantity}
 #  docker.compose:
 #    lifecycle-management: none
 #  cloud.refresh:
@@ -63,5 +65,6 @@ springdoc:
 application.description: "@project.description@"
 gateway.url: ${API_GATEWAY:http://localhost:8080}
 api.version: /api/v1
+admin.path: /admin
 carts.path: /carts
 products.path: /products

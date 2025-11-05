@@ -27,7 +27,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 import com.apj.ecomm.product.constants.AppConstants;
 import com.apj.ecomm.product.domain.model.CreateProductRequest;
-import com.apj.ecomm.product.domain.model.Paged;
+import com.apj.ecomm.product.domain.model.UpdateProductFromMessageRequest;
 import com.apj.ecomm.product.domain.model.UpdateProductRequest;
 import com.apj.ecomm.product.web.exception.ResourceAccessDeniedException;
 import com.apj.ecomm.product.web.exception.ResourceNotFoundException;
@@ -39,6 +39,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 class ProductServiceTest {
 
 	private List<Product> products;
+
+	private Product product;
 
 	@Mock
 	private ProductRepository repository;
@@ -57,25 +59,25 @@ class ProductServiceTest {
 		final var objMap = new ObjectMapper();
 		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (var inputStream = TypeReference.class.getResourceAsStream("/data/products.json")) {
-			products = objMap.readValue(inputStream, new TypeReference<List<Product>>() {});
+			products = objMap.readValue(inputStream, new TypeReference<List<Product>>() {
+			});
+			product = products.getFirst();
 		}
 	}
 
 	@Test
-	void findAll() {
-		final var response = products.stream().map(mapper::toCatalog).toList();
-		final var result = new Paged<>(response, 0, products.size(), 1, List.of(), response.size());
+	void findProductIds_withPage() {
+		final var productIds = products.stream().map(Product::getId).toList();
 
 		when(specBuilder.build(any())).thenReturn(null);
 		when(repository.findAll(ArgumentMatchers.<Specification<Product>>any(), any(PageRequest.class)))
 			.thenReturn(new PageImpl<>(products));
 
-		assertEquals(result, service.findAll("", PageRequest.of(0, 10)));
+		assertEquals(productIds, service.findProductIds("", PageRequest.ofSize(10)));
 	}
 
 	@Test
 	void findById_found() {
-		final var product = products.get(0);
 		when(repository.findById(anyLong())).thenReturn(Optional.of(product));
 		assertEquals(mapper.toResponse(product), service.findById(1));
 	}
@@ -90,28 +92,37 @@ class ProductServiceTest {
 	void list() {
 		final var request = new CreateProductRequest("name", "description", List.of(AppConstants.IMAGE_DEFAULT),
 				Set.of("category"), 1, BigDecimal.ONE);
-		final var product = mapper.toEntity(request);
-		when(repository.save(any())).thenReturn(product);
-		assertEquals(mapper.toResponse(product), service.list("SHP001", "Shop Name", request));
+		final var created = mapper.toEntity(request);
+		when(repository.save(any())).thenReturn(created);
+		assertEquals(mapper.toResponse(created), service.list("SHP001", "Shop Name", request));
 	}
 
 	@Test
 	void update_success() {
 		final var request = new UpdateProductRequest(null, "description", null, null, 1, BigDecimal.ONE);
-		final var existing = products.get(0);
-		final var product = mapper.updateEntity(request, existing);
+		final var updated = mapper.updateEntity(request, product);
 
-		when(repository.findById(anyLong())).thenReturn(Optional.of(product));
-		when(repository.save(any())).thenReturn(product);
+		when(repository.findById(anyLong())).thenReturn(Optional.of(updated));
+		when(repository.save(any())).thenReturn(updated);
 
-		assertEquals(mapper.toResponse(product), service.update(1, "SHP001", request));
+		assertEquals(mapper.toResponse(updated), service.update(1, "SHP001", request));
+	}
+
+	@Test
+	void update_notFound() {
+		final var request = new UpdateProductRequest(null, "description", null, null, 1, BigDecimal.ONE);
+		when(repository.findById(anyLong())).thenReturn(Optional.empty());
+		assertThrows(ResourceNotFoundException.class, () -> service.update(1, "SHP001", request));
 	}
 
 	@Test
 	void update_accessDenied() {
 		final var request = new UpdateProductRequest(null, "description", null, null, 1, BigDecimal.ONE);
-		when(repository.findById(anyLong())).thenReturn(Optional.empty());
-		assertThrows(ResourceAccessDeniedException.class, () -> service.update(1, "SHP001", request));
+		final var updated = mapper.updateEntity(request, product);
+
+		when(repository.findById(anyLong())).thenReturn(Optional.of(updated));
+
+		assertThrows(ResourceAccessDeniedException.class, () -> service.update(1, "SHP002", request));
 	}
 
 	@Test
@@ -122,20 +133,15 @@ class ProductServiceTest {
 	}
 
 	@Test
-	void updateShopName() {
-		final var product = products.get(0);
+	void update_fromMessage() {
+		final var shopName = "New Shop Name";
+		final var request = new UpdateProductFromMessageRequest(shopName);
 
 		when(repository.findById(anyLong())).thenReturn(Optional.of(product));
-		product.setShopName("New Shop Name");
+		product.setShopName(shopName);
 		when(repository.save(any())).thenReturn(product);
 
-		assertEquals(mapper.toResponse(product), service.update("New Shop Name", 1L));
-	}
-
-	@Test
-	void updateShopName_notFound() {
-		when(repository.findById(anyLong())).thenReturn(Optional.empty());
-		assertThrows(ResourceNotFoundException.class, () -> service.update("New Shop Name", 1L));
+		assertEquals(mapper.toResponse(product), service.update(1L, request));
 	}
 
 }

@@ -39,6 +39,8 @@ public final class AppConstants {
 
 	public static final String MSG_FORBIDDEN = "User session expired / " + MSG_ACCESS_DENIED + "endpoint";
 
+	public static final String MSG_UNPROCESSABLE_ENTITY = "An active order exists for this shop. Please try again once all orders are completed/inactive.";
+
 	public static final String HEADER_USER_ID = "ecomm-user-id";
 
 }

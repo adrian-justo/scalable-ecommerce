@@ -138,3 +138,20 @@ services:
       cart-postgres:
         condition: service_healthy
     <<: [*common-config, *health-chk]
+    
+  order-management:
+    image: ${DOCKER_USERNAME}/ecomm-order-management
+    container_name: ecomm-order-management
+    ports: 
+      - "8086:8086"
+    environment:
+      <<: [*common-env, *config-id, *config-retry, *eureka, *redis]
+      SERVER_PORT: 8086
+      SPRING_CLOUD_CONFIG_NAME: database,monitoring
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-postgres:5432/orders_db
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      order-postgres:
+        condition: service_healthy
+    <<: [*common-config, *health-chk]
