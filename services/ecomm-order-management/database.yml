@@ -1,0 +1,18 @@
+services:
+  order-postgres:
+    image: postgres
+    container_name: order-postgres
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: ${ORDER_PG_USER:-user}
+      POSTGRES_PASSWORD: ${ORDER_PG_PASSWORD:-pass}
+    ports:
+      - 5435:5432
+    restart: unless-stopped
+    networks:
+      - ecomm-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

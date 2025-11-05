@@ -3,12 +3,14 @@
     "buyerId": "client123",
     "products": [
       {
-        "productId": 1,
-        "quantity": 2
+        "productId": 2,
+        "shopId": "SHP002",
+        "quantity": 1
       },
       {
-        "productId": 2,
-        "quantity": 3
+        "productId": 3,
+        "shopId": "SHP002",
+        "quantity": 1
       }
     ]
   },
@@ -16,11 +18,13 @@
     "buyerId": "buyer001",
     "products": [
       {
-        "productId": 3,
-        "quantity": 2
+        "productId": 4,
+        "shopId": "SHP001",
+        "quantity": 4
       },
       {
-        "productId": 4,
+        "productId": 3,
+        "shopId": "SHP002",
         "quantity": 1
       }
     ]

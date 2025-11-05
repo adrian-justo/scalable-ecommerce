@@ -22,10 +22,18 @@ spring:
     properties:
       '[hibernate.format_sql]': true
   cloud:
-    function.definition: syncShopName
+    function.definition: syncShopName;processAndReturnDetail;returnProductStock;syncShopStatus
     stream.bindings:
       syncShopName-in-0:
         destination: ${Q_PRD_SYNC_SN:product-sync-shop-name}
+      processAndReturnDetail-in-0:
+        destination: ${Q_PRD_UPDATE_SO:product-update-stock-ordered}
+      processAndReturnDetail-out-0:
+        destination: ${Q_ORD_RETURN_PD:order-return-product-details}
+      returnProductStock-in-0:
+        destination: ${Q_PRD_RETURN_SO:product-return-stock-ordered}
+      syncShopStatus-in-0:
+        destination: ${Q_PRD_SYNC_SS:product-sync-shop-status}
 #  docker.compose:
 #    lifecycle-management: none
 #  cloud.refresh:

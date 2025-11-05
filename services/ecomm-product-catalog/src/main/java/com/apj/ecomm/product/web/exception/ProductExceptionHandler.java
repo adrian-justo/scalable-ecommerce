@@ -57,7 +57,7 @@ class ProductExceptionHandler {
 	@ExceptionHandler(SemanticException.class)
 	ProblemDetail handle(final SemanticException e) {
 		return getDetail(HttpStatus.BAD_REQUEST, AppConstants.MSG_FILTER_INVALID + "operation for "
-				+ (e.getMessage().contains("java.util.Set") ? "array" : "non-text") + " field");
+				+ (e.getMessage().contains("java.util.Set") ? "array" : "non-text") + " field. " + e.getMessage());
 	}
 
 	@ExceptionHandler(NumberFormatException.class)

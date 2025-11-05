@@ -1,8 +1,13 @@
 package com.apj.ecomm.cart.domain;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.apache.commons.lang3.StringUtils;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Context;
@@ -13,51 +18,55 @@ import org.mapstruct.Named;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 
-import com.apj.ecomm.cart.domain.model.CartItemCatalog;
 import com.apj.ecomm.cart.domain.model.CartItemDetail;
 import com.apj.ecomm.cart.domain.model.CartItemRequest;
 import com.apj.ecomm.cart.domain.model.CartItemResponse;
-import com.apj.ecomm.cart.web.client.product.ProductCatalog;
 import com.apj.ecomm.cart.web.client.product.ProductResponse;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,
 		nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 interface CartItemMapper {
 
-	List<CartItemCatalog> toCatalog(List<CartItem> items, @Context List<ProductCatalog> products);
-
-	default CartItemCatalog toCatalog(final CartItem item, @Context final List<ProductCatalog> products) {
-		return products.stream()
-			.filter(product -> product.id().equals(item.getProductId()))
-			.findFirst()
-			.map(product -> toCatalog(item, product))
-			.orElse(toCatalog(item, new ProductCatalog(item.getProductId(), null, null, null)));
-	}
-
-	CartItemCatalog toCatalog(CartItem item, ProductCatalog product);
-
-	CartItemDetail toDetail(CartItem item, ProductResponse product);
-
-	CartItemResponse toResponse(CartItem item);
-
-	default List<CartItem> toEntities(final List<CartItemRequest> requestList, final List<CartItem> existingItems,
-			final List<ProductCatalog> validProducts, final Cart cart) {
-		return requestList.stream()
-			.filter(request -> validProducts.stream().anyMatch(catalog -> catalog.id().equals(request.productId())))
-			.map(request -> updateEntity(request, existingItems).orElse(toEntity(cart, request)))
+	default List<CartItemDetail> toDetails(final List<CartItem> items,
+			@Context final Stream<ProductResponse> products) {
+		final var map = products.collect(Collectors.toMap(ProductResponse::id, Function.identity()));
+		return items.stream()
+			.filter(item -> map.get(item.getProductId()) != null)
+			.map(item -> toDetail(item, map.get(item.getProductId())))
 			.toList();
 	}
 
-	default Optional<CartItem> updateEntity(final CartItemRequest updated, final List<CartItem> existingItems) {
-		return existingItems.stream()
-			.filter(existing -> existing.getProductId().equals(updated.productId()))
-			.findFirst()
-			.map(existing -> updateEntity(updated, existing));
+	CartItemDetail toDetail(CartItem item, ProductResponse product);
+
+	@Mapping(target = "createdAt", ignore = true)
+	@Mapping(target = "updatedAt", ignore = true)
+	CartItemResponse toResponse(CartItem item);
+
+	@Named("toFullResponse")
+	@Mapping(target = "id", ignore = true)
+	CartItemResponse toFullResponse(CartItem item);
+
+	default List<CartItem> toAddItems(final List<CartItemRequest> requestList, final List<CartItem> existingItems,
+			final Map<Long, ProductResponse> validProducts, final Cart cart) {
+		final var existing = existingItems.stream()
+			.collect(Collectors.toMap(CartItem::getProductId, Function.identity()));
+		return requestList.stream()
+			.filter(request -> validProducts.containsKey(request.productId()))
+			.map(request -> updateOrAdd(request, existing, cart))
+			.map(item -> syncFrom(validProducts.get(item.getProductId()), item))
+			.toList();
+	}
+
+	private CartItem updateOrAdd(final CartItemRequest request, final Map<Long, CartItem> existingItems,
+			final Cart cart) {
+		return Optional.ofNullable(existingItems.get(request.productId()))
+			.map(existing -> updateAddQuantity(request, existing))
+			.orElse(toEntity(cart, request));
 	}
 
 	@Mapping(target = "quantity", ignore = true)
 	@BeanMapping(qualifiedByName = "addQuantity")
-	CartItem updateEntity(CartItemRequest updated, @MappingTarget CartItem existing);
+	CartItem updateAddQuantity(CartItemRequest updated, @MappingTarget CartItem existing);
 
 	@Named("addQuantity")
 	@AfterMapping
@@ -71,22 +80,39 @@ interface CartItemMapper {
 	@Mapping(target = "updatedAt", ignore = true)
 	CartItem toEntity(Cart cart, CartItemRequest request);
 
-	default List<CartItem> toEntities(final List<CartItem> existingItems, final List<CartItemRequest> requestList) {
-		return existingItems.stream()
-			.filter(existing -> requestList.stream()
-				.anyMatch(request -> request.productId().equals(existing.getProductId())))
-			.map(existing -> updateEntity(existing, requestList))
+	default List<CartItem> toUpdateItems(final List<CartItem> existingItems, final List<CartItemRequest> requestList,
+			final Map<Long, ProductResponse> validProducts) {
+		return toUpdateItemsStream(existingItems, requestList)
+			.map(item -> syncFrom(validProducts.get(item.getProductId()), item))
 			.toList();
 	}
 
-	default CartItem updateEntity(final CartItem existing, final List<CartItemRequest> requestList) {
-		return requestList.stream()
-			.filter(request -> request.productId().equals(existing.getProductId()))
-			.findFirst()
-			.map(request -> updateEntity(existing, request))
-			.orElseThrow();
+	default List<CartItem> toUpdateItems(final List<CartItem> existingItems, final List<CartItemRequest> requestList) {
+		return toUpdateItemsStream(existingItems, requestList).toList();
 	}
 
-	CartItem updateEntity(@MappingTarget CartItem existing, CartItemRequest updated);
+	private Stream<CartItem> toUpdateItemsStream(final List<CartItem> existingItems,
+			final List<CartItemRequest> requestList) {
+		final var map = requestList.stream().collect(Collectors.toMap(CartItemRequest::productId, Function.identity()));
+		return existingItems.stream()
+			.filter(existing -> map.containsKey(existing.getProductId()))
+			.map(existing -> updateEntity(map.get(existing.getProductId()), existing));
+	}
+
+	CartItem updateEntity(CartItemRequest updated, @MappingTarget CartItem existing);
+
+	private CartItem syncFrom(final ProductResponse product, final CartItem item) {
+		if (product == null) {
+			item.setQuantity(0);
+			return item;
+		}
+		if (item.getQuantity() > product.stock()) {
+			item.setQuantity(product.stock());
+		}
+		if (StringUtils.isBlank(item.getShopId())) {
+			item.setShopId(product.shopId());
+		}
+		return item;
+	}
 
 }

@@ -18,11 +18,19 @@ spring:
     show-sql: true
     properties:
       '[hibernate.format_sql]': true
-  cloud.stream.bindings:
-    syncShopName-out-0:
-      destination: ${Q_PRD_SYNC_SN:product-sync-shop-name}
-    createIfNotExist-out-0:
-      destination: ${Q_CRT_CREATE_INE:cart-create-if-not-exist}
+  cloud:
+    function.definition: returnUserDetails
+    stream.bindings:
+      syncShopName-out-0:
+        destination: ${Q_PRD_SYNC_SN:product-sync-shop-name}
+      createIfNotExist-out-0:
+        destination: ${Q_CRT_CREATE_INE:cart-create-if-not-exist}
+      returnUserDetails-in-0:
+        destination: ${Q_ACT_REQUEST_UD:account-request-user-details}
+      returnUserDetails-out-0:
+        destination: ${Q_ORD_RETURN_UD:order-return-user-details}
+      syncShopStatus-out-0:
+        destination: ${Q_PRD_SYNC_SS:product-sync-shop-status}
 #  docker.compose:
 #    lifecycle-management: none
 #  cloud.refresh:
@@ -67,3 +75,5 @@ users.path: /users
 auth.path: /auth/
 products.path: /products
 carts.path: /carts
+orders.path: /orders
+shop.path: /shop

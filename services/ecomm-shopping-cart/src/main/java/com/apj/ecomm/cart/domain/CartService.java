@@ -1,57 +1,139 @@
 package com.apj.ecomm.cart.domain;
 
-import static java.util.function.Predicate.not;
-
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.apj.ecomm.cart.domain.model.BuyerCartResponse;
-import com.apj.ecomm.cart.domain.model.CartResponse;
-import com.apj.ecomm.cart.domain.model.Paged;
+import com.apj.ecomm.cart.domain.model.CartDetailResponse;
+import com.apj.ecomm.cart.domain.model.CartItemDetail;
+import com.apj.ecomm.cart.domain.model.CartItemRequest;
+import com.apj.ecomm.cart.domain.model.CartItemResponse;
 import com.apj.ecomm.cart.web.client.CartClient;
+import com.apj.ecomm.cart.web.client.product.ProductResponse;
 import com.apj.ecomm.cart.web.exception.ResourceNotFoundException;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 
 @Service
-@Transactional(readOnly = true)
-@Observed(name = "service.cart")
+@Transactional
+@Observed(name = "service.cart.product")
 @RequiredArgsConstructor
 class CartService implements ICartService {
 
-	private final CartRepository repository;
+	private final CartRepository cartRepository;
+
+	private final CartItemRepository repository;
 
 	private final CartClient client;
 
-	private final CartMapper mapper;
+	private final CartItemMapper mapper;
 
-	public Paged<CartResponse> findAll(final Pageable pageable) {
-		return new Paged<>(repository.findAll(pageable).map(mapper::toResponse));
-	}
+	private final CartMapper cartMapper;
 
-	public CartResponse findById(final long id) {
-		return repository.findById(id).map(mapper::toResponse).orElseThrow(ResourceNotFoundException::new);
-	}
-
-	public BuyerCartResponse findByBuyerId(final String buyerId) {
-		return getActiveCartBy(buyerId).map(cart -> mapper.toDetail(cart, getProductsFrom(client, cart.getProducts())))
+	@Transactional(readOnly = true)
+	public CartDetailResponse findCartBy(final String buyerId) {
+		return findActiveCartBy(buyerId)
+			.map(cart -> cartMapper.toDetail(cart, getDetails(cart.getProducts().stream().map(CartItem::getProductId))))
 			.orElseThrow(ResourceNotFoundException::new);
 	}
 
-	@Transactional
 	public void createCart(final String buyerId) {
-		if (getActiveCartBy(buyerId).isEmpty()) {
-			repository.save(mapper.create(buyerId, List.of()));
+		if (findActiveCartBy(buyerId).isEmpty()) {
+			cartRepository.save(cartMapper.create(buyerId, List.of()));
 		}
 	}
 
-	private Optional<Cart> getActiveCartBy(final String buyerId) {
-		return repository.findAllByBuyerId(buyerId).stream().filter(not(Cart::isOrdered)).findFirst();
+	@Transactional(readOnly = true)
+	public List<CartItemResponse> findItemsBy(final String buyerId) {
+		final var cart = getActiveCartBy(buyerId);
+		return cart.getProducts().stream().map(mapper::toResponse).toList();
+	}
+
+	private Stream<ProductResponse> getDetails(final Stream<Long> productIds) {
+		final var ids = productIds.sorted().map(String::valueOf).collect(Collectors.joining(","));
+		return ids.isEmpty() ? Stream.empty()
+				: client.getAllProducts("stock>0;id:" + ids, Pageable.unpaged()).result().stream();
+	}
+
+	@Transactional(readOnly = true)
+	public CartItemDetail findItemBy(final long productId, final String buyerId) {
+		final var cart = getActiveCartBy(buyerId);
+		final var items = cart.getProducts()
+			.stream()
+			.collect(Collectors.toMap(CartItem::getProductId, Function.identity()));
+		if (!items.containsKey(productId))
+			throw new ResourceNotFoundException("Item");
+		return getDetails(items.keySet().stream()).filter(product -> product.id().equals(productId))
+			.findFirst()
+			.map(product -> mapper.toDetail(items.get(productId), product))
+			.orElseThrow(() -> new ResourceNotFoundException("Item"));
+	}
+
+	public List<CartItemResponse> addItems(final String buyerId, final List<CartItemRequest> requestList) {
+		final var cart = getActiveCartBy(buyerId);
+		final var items = mapper.toAddItems(requestList, cart.getProducts(), getValidProducts(requestList, buyerId),
+				cart);
+		return saveOnlyValid(items, cart);
+	}
+
+	public List<CartItemResponse> updateItems(final String buyerId, final List<CartItemRequest> requestList) {
+		final var cart = getActiveCartBy(buyerId);
+		final var items = mapper.toUpdateItems(cart.getProducts(), requestList, getValidProducts(requestList, buyerId));
+		return saveOnlyValid(items, cart);
+	}
+
+	private Map<Long, ProductResponse> getValidProducts(final List<CartItemRequest> requestList, final String buyerId) {
+		return getDetails(requestList.stream().map(CartItemRequest::productId))
+			.filter(product -> !buyerId.equals(product.shopId()))
+			.collect(Collectors.toMap(ProductResponse::id, Function.identity()));
+	}
+
+	public List<CartItemResponse> updateItemsFromEvent(final String buyerId, final Map<Long, Integer> products) {
+		final var cart = getActiveCartBy(buyerId);
+		final var items = mapper.toUpdateItems(cart.getProducts(),
+				products.entrySet()
+					.stream()
+					.map(entry -> new CartItemRequest(entry.getKey(), entry.getValue()))
+					.toList());
+		return saveOnlyValid(items, cart);
+	}
+
+	private List<CartItemResponse> saveOnlyValid(final List<CartItem> items, final Cart cart) {
+		return repository.saveAll(removeOutOfStock(items, cart)).stream().map(mapper::toResponse).toList();
+	}
+
+	private List<CartItem> removeOutOfStock(final List<CartItem> entities, final Cart cart) {
+		final var items = entities.stream().filter(item -> item.getQuantity() < 1).toList();
+		if (!items.isEmpty()) {
+			deleteAll(items, cart);
+		}
+		return items.isEmpty() ? entities : entities.stream().filter(item -> item.getQuantity() > 0).toList();
+	}
+
+	public void deleteItems(final String buyerId, final List<Long> productIds) {
+		final var cart = getActiveCartBy(buyerId);
+		deleteAll(cart.getProducts().stream().filter(item -> productIds.contains(item.getProductId())).toList(), cart);
+	}
+
+	private void deleteAll(final List<CartItem> items, final Cart cart) {
+		cart.getProducts().removeAll(items);
+		cartRepository.save(cart);
+	}
+
+	private Cart getActiveCartBy(final String buyerId) {
+		return findActiveCartBy(buyerId).orElseThrow(ResourceNotFoundException::new);
+	}
+
+	private Optional<Cart> findActiveCartBy(final String buyerId) {
+		return cartRepository.findAllByBuyerId(buyerId).stream().filter(Cart::isActive).findFirst();
 	}
 
 }

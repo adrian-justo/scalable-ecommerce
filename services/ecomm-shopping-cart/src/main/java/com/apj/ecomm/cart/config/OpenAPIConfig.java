@@ -3,6 +3,7 @@ package com.apj.ecomm.cart.config;
 import java.util.List;
 
 import org.springdoc.core.customizers.OpenApiCustomizer;
+import org.springdoc.core.models.GroupedOpenApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,14 +25,28 @@ public class OpenAPIConfig {
 	}
 
 	@Bean
-	OpenApiCustomizer pathPrefixRemover(@Value("${api.version}") final String apiVersion,
-			@Value("${carts.path}") final String basePath) {
+	GroupedOpenApi adminApi(@Value("${api.version}${admin.path}${carts.path}") final String path) {
+		return getApiFor("admin", path);
+	}
+
+	@Bean
+	GroupedOpenApi cartsApi(@Value("${api.version}${carts.path}${products.path}") final String path) {
+		return getApiFor("shpcrt", path);
+	}
+
+	private GroupedOpenApi getApiFor(final String group, final String path) {
+		return GroupedOpenApi.builder()
+			.group(group)
+			.pathsToMatch(path + "/**")
+			.addOpenApiCustomizer(pathPrefixRemover(path))
+			.build();
+	}
+
+	private OpenApiCustomizer pathPrefixRemover(final String path) {
 		return openApi -> {
 			final var paths = openApi.getPaths();
 			// To avoid ConcurrentModificationException
 			final var keySet = paths.keySet().toArray(new String[0]);
-			final var path = apiVersion + basePath;
-
 			for (final String key : keySet) {
 				paths.put(key.replace(path, ""), paths.get(key));
 				paths.remove(key);

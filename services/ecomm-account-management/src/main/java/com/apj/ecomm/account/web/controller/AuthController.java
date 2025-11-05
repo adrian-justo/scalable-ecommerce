@@ -13,6 +13,7 @@ import com.apj.ecomm.account.domain.IAuthService;
 import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
+import com.apj.ecomm.account.web.util.RequestValidator;
 
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,7 +41,7 @@ public class AuthController {
 	@PostMapping("register")
 	@ResponseStatus(HttpStatus.CREATED)
 	public UserResponse createUser(@RequestBody @Valid final CreateUserRequest request) {
-		request.validate();
+		RequestValidator.validate(request);
 		return service.register(request);
 	}
 

@@ -22,4 +22,9 @@ class AccountEventListener {
 		streamBridge.send("createIfNotExist-out-0", data);
 	}
 
+	@TransactionalEventListener
+	void syncShopStatus(final ShopStatusUpdatedEvent data) {
+		streamBridge.send("syncShopStatus-out-0", data);
+	}
+
 }

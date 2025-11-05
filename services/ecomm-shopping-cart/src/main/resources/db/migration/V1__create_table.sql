@@ -1,14 +1,15 @@
 create table cart (
     id bigserial primary key,
     buyer_id varchar(255) not null,
-    ordered boolean not null,
     created_at timestamp(6) with time zone,
-    updated_at timestamp(6) with time zone
+    updated_at timestamp(6) with time zone,
+    active boolean default true
 );
     
 create table cart_item (
     cart_id bigint not null,
     product_id bigint not null,
+    shop_id varchar(255) not null,
     quantity integer,
     created_at timestamp(6) with time zone,
     updated_at timestamp(6) with time zone,

@@ -2,6 +2,7 @@ include:
   - ../services/ecomm-account-management/database.yml
   - ../services/ecomm-product-catalog/database.yml
   - ../services/ecomm-shopping-cart/database.yml
+  - ../services/ecomm-order-management/database.yml
 
 networks:
   ecomm-net:

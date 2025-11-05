@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,9 +21,11 @@ import com.apj.ecomm.account.domain.model.Paged;
 import com.apj.ecomm.account.domain.model.UpdateUserRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.util.PathValidator;
+import com.apj.ecomm.account.web.util.RequestValidator;
 
 import io.micrometer.observation.annotation.Observed;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -63,9 +66,10 @@ public class UserController {
 			@ApiResponse(responseCode = "404", description = "Account" + AppConstants.MSG_NOT_FOUND,
 					content = @Content) })
 	@GetMapping("/{username}")
-	public UserResponse getUserByUsername(@PathVariable final String username) {
+	public UserResponse getUserByUsername(@PathVariable final String username,
+			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String userId) {
 		PathValidator.username(username);
-		return service.findByUsername(username);
+		return service.findByUsername(username, userId);
 	}
 
 	@Operation(summary = "Account Management", description = "Update details of a user account")
@@ -78,7 +82,7 @@ public class UserController {
 	public UserResponse updateUser(@PathVariable final String username,
 			@RequestBody @Valid final UpdateUserRequest request) {
 		PathValidator.username(username);
-		request.validate();
+		RequestValidator.validate(request);
 		return service.update(username, request);
 	}
 
@@ -87,10 +91,12 @@ public class UserController {
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
 			@ApiResponse(responseCode = "404", description = "Account" + AppConstants.MSG_NOT_FOUND,
+					content = @Content),
+			@ApiResponse(responseCode = "422", description = AppConstants.MSG_UNPROCESSABLE_ENTITY,
 					content = @Content) })
 	@DeleteMapping("/{username}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void deleteById(@PathVariable final String username) {
+	public void deleteUser(@PathVariable final String username) {
 		PathValidator.username(username);
 		service.deleteByUsername(username);
 	}

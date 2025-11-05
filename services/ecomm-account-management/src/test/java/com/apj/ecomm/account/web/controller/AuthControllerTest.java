@@ -31,6 +31,7 @@ import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.RequestArgumentNotValidException;
+import com.apj.ecomm.account.web.util.RequestValidator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -59,14 +60,16 @@ class AuthControllerTest {
 	void setUp() throws Exception {
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {});
+			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
+			});
 		}
 	}
 
 	@Test
 	void userRegistration_success() throws Exception {
 		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
-				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+				"Seller Name", "Seller's Shop", "Seller's Address", Set.of(Role.SELLER),
+				Set.of(NotificationType.EMAIL));
 		final var userResponse = new UserResponse("id", request.username(), request.email(), request.mobileNo(),
 				request.name(), "", "", request.roles(), request.notificationTypes(), Instant.now(), Instant.now(),
 				true);
@@ -82,7 +85,7 @@ class AuthControllerTest {
 
 	@Test
 	void userRegistration_invalidDetails() throws Exception {
-		final var request = new CreateUserRequest("", "", "", "", "", "", null, null);
+		final var request = new CreateUserRequest("", "", "", "", "", "", "", null, null);
 		mvc.perform(post(uri + "register").contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request))).andExpect(status().isBadRequest());
 	}
@@ -90,34 +93,35 @@ class AuthControllerTest {
 	@Test
 	void userRegistration_emailSmsMissing() {
 		final var request = new CreateUserRequest("seller123", "", "", "$elL3r12", "Seller Name", "Seller's Shop",
-				Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+				"Seller's Address", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test
 	void userRegistration_invalidRole() {
 		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
-				"Seller Name", "Seller's Shop", Set.of(Role.ADMIN, Role.SELLER), Set.of(NotificationType.EMAIL));
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+				"Seller Name", "Seller's Shop", "Seller's Address", Set.of(Role.ADMIN, Role.SELLER),
+				Set.of(NotificationType.EMAIL));
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test
-	void userRegistration_seller_noShopName() {
+	void userRegistration_seller_noShopDetails() {
 		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
-				"Seller Name", "", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+				"Seller Name", "", "", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test
 	void userRegistration_invalidNotificationType() {
 		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
-				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of());
-		assertThrows(RequestArgumentNotValidException.class, request::validate);
+				"Seller Name", "Seller's Shop", "Seller's Address", Set.of(Role.SELLER), Set.of());
+		assertThrows(RequestArgumentNotValidException.class, () -> RequestValidator.validate(request));
 	}
 
 	@Test
 	void login_success() throws Exception {
-		final var userResponse = response.get(0);
+		final var userResponse = response.getFirst();
 		final var request = new LoginRequest(userResponse.username(), "password");
 
 		when(service.login(any())).thenReturn("jwt.token.here");

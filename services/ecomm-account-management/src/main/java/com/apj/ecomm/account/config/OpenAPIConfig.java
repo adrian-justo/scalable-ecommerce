@@ -25,28 +25,24 @@ public class OpenAPIConfig {
 	}
 
 	@Bean
-	GroupedOpenApi usersApi(@Value("${api.version}") final String apiVersion,
-			@Value("${users.path}") final String basePath) {
-		final var path = apiVersion + basePath;
-		return GroupedOpenApi.builder()
-			.group("acctmgt")
-			.pathsToMatch(path, path + "/**")
-			.addOpenApiCustomizer(pathPrefixRemover(path))
-			.build();
+	GroupedOpenApi authApi(@Value("${api.version}${auth.path}") final String path) {
+		return getApiFor("auth", path);
 	}
 
 	@Bean
-	GroupedOpenApi authApi(@Value("${api.version}") final String apiVersion,
-			@Value("${auth.path}") final String basePath) {
-		final var path = apiVersion + basePath;
+	GroupedOpenApi usersApi(@Value("${api.version}${users.path}") final String path) {
+		return getApiFor("acctmgt", path);
+	}
+
+	private GroupedOpenApi getApiFor(final String group, final String path) {
 		return GroupedOpenApi.builder()
-			.group("auth")
+			.group(group)
 			.pathsToMatch(path + "/**")
 			.addOpenApiCustomizer(pathPrefixRemover(path))
 			.build();
 	}
 
-	OpenApiCustomizer pathPrefixRemover(final String path) {
+	private OpenApiCustomizer pathPrefixRemover(final String path) {
 		return openApi -> {
 			final var paths = openApi.getPaths();
 			// To avoid ConcurrentModificationException

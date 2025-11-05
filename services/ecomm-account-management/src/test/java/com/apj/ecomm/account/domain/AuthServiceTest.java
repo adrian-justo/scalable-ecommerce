@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,13 +36,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-	private List<User> users;
+	private User user;
 
 	@Mock
 	private UserRepository repository;
-
-	@Spy
-	private final UserMapper mapper = Mappers.getMapper(UserMapper.class);
 
 	@Mock
 	private PasswordEncoder encoder;
@@ -51,6 +50,12 @@ class AuthServiceTest {
 	@Mock
 	private TokenService token;
 
+	@Mock
+	private ApplicationEventPublisher eventPublisher;
+
+	@Spy
+	private final UserMapper mapper = Mappers.getMapper(UserMapper.class);
+
 	@InjectMocks
 	private AuthService service;
 
@@ -59,28 +64,32 @@ class AuthServiceTest {
 		final var objMap = new ObjectMapper();
 		objMap.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			users = objMap.readValue(inputStream, new TypeReference<List<User>>() {});
+			final var users = objMap.readValue(inputStream, new TypeReference<List<User>>() {
+			});
+			user = users.get(1);
 		}
 	}
 
 	@Test
 	void register_success() {
 		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
-				"Seller Name", "Seller's Shop", Set.of(Role.SELLER), Set.of(NotificationType.EMAIL));
-		final var user = mapper.toEntity(request);
+				"Seller Name", "Seller's Shop", "Seller's Address", Set.of(Role.SELLER),
+				Set.of(NotificationType.EMAIL));
+		final var saved = mapper.toEntity(request, encoder);
+		saved.setId(UUID.randomUUID());
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
 			.thenReturn(Optional.empty());
-		when(repository.save(any())).thenReturn(user);
+		when(repository.save(any())).thenReturn(saved);
 
-		assertEquals(mapper.toResponse(user), service.register(request));
+		assertEquals(mapper.toResponse(saved), service.register(request));
 	}
 
 	@Test
 	void register_alreadyRegistered() {
-		final var user = users.get(1);
 		final var request = new CreateUserRequest(user.getUsername(), user.getEmail(), user.getMobileNo(),
-				user.getPassword(), user.getName(), user.getShopName(), user.getRoles(), user.getNotificationTypes());
+				user.getPassword(), user.getName(), user.getShopName(), user.getAddress(), user.getRoles(),
+				user.getNotificationTypes());
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
 			.thenReturn(Optional.of(user));
@@ -90,8 +99,8 @@ class AuthServiceTest {
 
 	@Test
 	void login_success() {
-		final var user = users.get(0);
 		final var request = new LoginRequest(user.getEmail(), user.getPassword());
+		user.setId(UUID.randomUUID());
 
 		when(manager.authenticate(any()))
 			.thenReturn(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
