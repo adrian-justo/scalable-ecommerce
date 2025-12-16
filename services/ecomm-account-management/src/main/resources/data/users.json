@@ -26,6 +26,7 @@
       "EMAIL",
       "SMS"
     ],
+    "accountId": "acct_001",
     "active": true
   },
   {
@@ -54,6 +55,7 @@
     ],
     "notificationTypes": [
       "SMS"
-    ]
+    ],
+    "accountId": "acct_002"
   }
 ]

@@ -72,6 +72,6 @@ springdoc:
     path: /docs/products/api
 
 application.description: "@project.description@"
-gateway.url: ${API_GATEWAY:http://localhost:8080}
-api.version: /api/v1
-products.path: /products
+gateway.url: ${URL_API_GATEWAY:http://localhost:8080}
+api.version: ${API_VERSION1:/api/v1}
+products.path: ${PATH_PRD_MS:/products}

@@ -8,17 +8,15 @@ paths:
     - /actuator/**
     - /docs/**
     - /api/*/auth/**
+    - /api/*/webhooks/**
   getOnly:
-    - /api/*/products
-    - /api/*/products/**
+    - /api/*/products**
   buyerOnly:
-    - /api/*/carts
-    - /api/*/carts/**
-    - /api/*/orders
-    - /api/*/orders/**
+    - /api/*/carts**
+    - /api/*/orders**
+    - /api/*/payments**
   sellerOnly:
-    - /api/*/products
-    - /api/*/products/**
+    - /api/*/products**
     - /api/*/shop/**
   adminOnly:
     - /api/*/users
@@ -81,6 +79,10 @@ spring:
         uri: lb://ECOMM-ORDER-MANAGEMENT
         predicates:
           - Path=/api/*/admin/orders/**, /api/*/shop/orders/**, /api/*/orders/**, /docs/orders/**
+      - id: Payment Processing Service
+        uri: lb://ECOMM-PAYMENT-PROCESSING
+        predicates:
+          - Path=/api/*/admin/payments/**, /api/*/payments/**, /docs/payments/**
 
 springdoc.swagger-ui:
   path: /docs
@@ -93,10 +95,12 @@ springdoc.swagger-ui:
       url: /docs/products/api
     - name: Shopping Cart API
       url: /docs/carts/api/shpcrt
-    - name: Order API
+    - name: Order Management API
       url: /docs/orders/api/checkout
     - name: Order Fulfillment API
       url: /docs/orders/api/fulfill
+    - name: Payment Processing API
+      url: /docs/payments/api/pay
 
 server.port: 8080
 

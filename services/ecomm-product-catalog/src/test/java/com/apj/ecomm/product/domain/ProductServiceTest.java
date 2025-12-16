@@ -94,7 +94,7 @@ class ProductServiceTest {
 				Set.of("category"), 1, BigDecimal.ONE);
 		final var created = mapper.toEntity(request);
 		when(repository.save(any())).thenReturn(created);
-		assertEquals(mapper.toResponse(created), service.list("SHP001", "Shop Name", request));
+		assertEquals(mapper.toResponse(created), service.list("SHP001", "Shop Name", "active", request));
 	}
 
 	@Test

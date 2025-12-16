@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -45,7 +44,7 @@ class AuthControllerTest {
 	@Value("${api.version}${auth.path}")
 	private String uri;
 
-	private List<UserResponse> response;
+	private UserResponse response;
 
 	@Autowired
 	private MockMvc mvc;
@@ -60,8 +59,9 @@ class AuthControllerTest {
 	void setUp() throws Exception {
 		mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
 		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
-			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
+			final var list = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
 			});
+			response = list.getFirst();
 		}
 	}
 
@@ -70,15 +70,12 @@ class AuthControllerTest {
 		final var request = new CreateUserRequest("seller123", "seller123@mail.com", "+639031234567", "$elL3r12",
 				"Seller Name", "Seller's Shop", "Seller's Address", Set.of(Role.SELLER),
 				Set.of(NotificationType.EMAIL));
-		final var userResponse = new UserResponse("id", request.username(), request.email(), request.mobileNo(),
-				request.name(), "", "", request.roles(), request.notificationTypes(), Instant.now(), Instant.now(),
-				true);
 
-		when(service.register(any())).thenReturn(userResponse);
+		when(service.register(any())).thenReturn(response);
 		final var action = mvc.perform(post(uri + "register").contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)));
 
-		final var jsonResponse = mapper.writeValueAsString(userResponse);
+		final var jsonResponse = mapper.writeValueAsString(response);
 		action.andExpect(status().isCreated()).andExpect(content().json(jsonResponse));
 		JSONAssert.assertEquals(jsonResponse, action.andReturn().getResponse().getContentAsString(), true);
 	}
@@ -121,8 +118,7 @@ class AuthControllerTest {
 
 	@Test
 	void login_success() throws Exception {
-		final var userResponse = response.getFirst();
-		final var request = new LoginRequest(userResponse.username(), "password");
+		final var request = new LoginRequest(response.username(), "password");
 
 		when(service.login(any())).thenReturn("jwt.token.here");
 		mvc.perform(

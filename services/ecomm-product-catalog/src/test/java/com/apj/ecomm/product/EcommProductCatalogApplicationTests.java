@@ -33,11 +33,11 @@ import com.apj.ecomm.product.constants.AppConstants;
 import com.apj.ecomm.product.domain.model.CreateProductRequest;
 import com.apj.ecomm.product.domain.model.ProductResponse;
 import com.apj.ecomm.product.domain.model.UpdateProductRequest;
-import com.apj.ecomm.product.web.messaging.OrderedProductDetails;
-import com.apj.ecomm.product.web.messaging.ProductStockUpdate;
-import com.apj.ecomm.product.web.messaging.ReturnProductStockEvent;
-import com.apj.ecomm.product.web.messaging.ShopNameUpdatedEvent;
-import com.apj.ecomm.product.web.messaging.ShopStatusUpdatedEvent;
+import com.apj.ecomm.product.web.messaging.account.ShopNameUpdatedEvent;
+import com.apj.ecomm.product.web.messaging.account.ShopStatusUpdatedEvent;
+import com.apj.ecomm.product.web.messaging.order.OrderedProductDetails;
+import com.apj.ecomm.product.web.messaging.order.ProductStockUpdate;
+import com.apj.ecomm.product.web.messaging.order.ReturnProductStockEvent;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -114,6 +114,7 @@ class EcommProductCatalogApplicationTests {
 	void cache_Create() throws JSONException, JsonProcessingException {
 		final var response = given().header(AppConstants.HEADER_USER_ID, "SHP001")
 			.header(AppConstants.HEADER_SHOP_NAME, "Shop Name")
+			.header(AppConstants.HEADER_TRANSFER_STATUS, "active")
 			.contentType("application/json")
 			.body(mapper.writeValueAsString(new CreateProductRequest("name", null, null, null, null, null)))
 			.when()

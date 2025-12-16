@@ -1,6 +1,8 @@
 package com.apj.ecomm.order.domain;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -20,12 +22,13 @@ import com.apj.ecomm.order.domain.model.Paged;
 import com.apj.ecomm.order.web.client.OrderClient;
 import com.apj.ecomm.order.web.exception.OrderStillProcessingException;
 import com.apj.ecomm.order.web.exception.ResourceNotFoundException;
-import com.apj.ecomm.order.web.messaging.ProductResponse;
-import com.apj.ecomm.order.web.messaging.ProductStockUpdate;
-import com.apj.ecomm.order.web.messaging.RequestAccountInformationEvent;
-import com.apj.ecomm.order.web.messaging.ReturnProductStockEvent;
-import com.apj.ecomm.order.web.messaging.UpdateCartItemsEvent;
-import com.apj.ecomm.order.web.messaging.UserResponse;
+import com.apj.ecomm.order.web.messaging.account.RequestAccountInformationEvent;
+import com.apj.ecomm.order.web.messaging.account.UserResponse;
+import com.apj.ecomm.order.web.messaging.cart.UpdateCartItemsEvent;
+import com.apj.ecomm.order.web.messaging.payment.CheckoutSessionRequest;
+import com.apj.ecomm.order.web.messaging.product.ProductResponse;
+import com.apj.ecomm.order.web.messaging.product.ProductStockUpdate;
+import com.apj.ecomm.order.web.messaging.product.ReturnProductStockEvent;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -117,16 +120,20 @@ class OrderService extends BaseService implements IOrderService {
 		return forUpdate;
 	}
 
-	public List<OrderItem> populateOrderItemDetail(final String buyerId, final Map<Long, ProductResponse> details) {
+	public CheckoutSessionRequest populateDetailAndRequestCheckout(final String buyerId,
+			final Map<Long, ProductResponse> details) {
 		final var validItems = populateItems(buyerId, details);
 		final var validOrders = validItems.get(false)
 			.entrySet()
 			.stream()
 			.map(entry -> removeInvalid(entry.getKey(), entry.getValue()))
-			.collect(Collectors.partitioningBy(order -> !order.getProducts().isEmpty()));
+			.collect(Collectors.partitioningBy(order -> !order.getProducts().isEmpty(), Collectors.toSet()));
+		final var forUpdate = getAllValid(validOrders.get(true), validItems.get(true).keySet());
+		final var forCheckout = forUpdate.stream().map(mapper::toResponse).toList();
 
-		repository.saveAll(updateOrDeactivate(validOrders, validItems.get(true).keySet()));
-		return itemRepository.saveAll(validItems.get(true).values().stream().flatMap(List::stream).toList());
+		repository.saveAll(addInvalid(forUpdate, validOrders.get(false)));
+		itemRepository.saveAll(validItems.get(true).values().stream().flatMap(List::stream).toList());
+		return forCheckout.isEmpty() ? null : new CheckoutSessionRequest(forCheckout);
 	}
 
 	private Map<Boolean, Map<Order, List<OrderItem>>> populateItems(final String buyerId,
@@ -174,27 +181,42 @@ class OrderService extends BaseService implements IOrderService {
 		return order;
 	}
 
-	private List<Order> updateOrDeactivate(final Map<Boolean, List<Order>> validOrders,
-			final Set<Order> validItemOrders) {
-		final var forUpdate = validOrders.get(true);
-		forUpdate.addAll(validItemOrders);
-		forUpdate.forEach(this::activate);
+	private Set<Order> getAllValid(final Set<Order> validOrders, final Set<Order> validItemOrders) {
+		validOrders.addAll(validItemOrders);
+		validOrders.forEach(this::activate);
+		return validOrders;
+	}
 
-		final var forDeletion = validOrders.get(false);
-		if (!forDeletion.isEmpty()) {
-			forUpdate.addAll(deactivate(forDeletion));
+	private Set<Order> addInvalid(final Set<Order> validOrders, final Set<Order> invalidOrders) {
+		if (!invalidOrders.isEmpty()) {
+			validOrders.addAll(deactivate(invalidOrders));
 		}
-		return forUpdate;
+		return validOrders;
 	}
 
 	private void activate(final Order order) {
-		order.setStatus(mapper.valueOf(Status.ACTIVE));
+		updateStatus(order, Status.ACTIVE);
 		order.computeTotals();
 	}
 
-	private List<Order> deactivate(final List<Order> orders) {
-		orders.forEach(order -> order.setStatus(mapper.valueOf(Status.INACTIVE)));
+	private Collection<Order> deactivate(final Collection<Order> orders) {
+		return updateStatus(orders, Status.INACTIVE);
+	}
+
+	public Map<String, BigDecimal> updateStatusAndGetDetails(final String buyerId, final Status status) {
+		final var updated = repository
+			.saveAll(updateStatus(repository.findAllByBuyerIdAndStatus(buyerId, Status.ACTIVE.toString()), status));
+		return Status.CONFIRMED.equals(status)
+				? updated.stream().collect(Collectors.toMap(Order::getShopId, Order::getTotal)) : null;
+	}
+
+	private Collection<Order> updateStatus(final Collection<Order> orders, final Status status) {
+		orders.forEach(order -> updateStatus(order, status));
 		return orders;
+	}
+
+	private void updateStatus(final Order order, final Status status) {
+		order.setStatus(mapper.valueOf(status));
 	}
 
 }

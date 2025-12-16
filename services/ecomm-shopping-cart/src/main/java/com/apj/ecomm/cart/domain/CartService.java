@@ -47,7 +47,7 @@ class CartService implements ICartService {
 
 	public void createCart(final String buyerId) {
 		if (findActiveCartBy(buyerId).isEmpty()) {
-			cartRepository.save(cartMapper.create(buyerId, List.of()));
+			cartRepository.save(create(buyerId));
 		}
 	}
 
@@ -128,12 +128,25 @@ class CartService implements ICartService {
 		cartRepository.save(cart);
 	}
 
+	public void updateCartOrdered(final String buyerId) {
+		findActiveCartBy(buyerId).ifPresent(this::orderAndCreate);
+	}
+
 	private Cart getActiveCartBy(final String buyerId) {
 		return findActiveCartBy(buyerId).orElseThrow(ResourceNotFoundException::new);
 	}
 
 	private Optional<Cart> findActiveCartBy(final String buyerId) {
-		return cartRepository.findAllByBuyerId(buyerId).stream().filter(Cart::isActive).findFirst();
+		return cartRepository.findByBuyerIdAndActiveTrue(buyerId);
+	}
+
+	private void orderAndCreate(final Cart cart) {
+		cart.setActive(false);
+		cartRepository.saveAll(List.of(cart, create(cart.getBuyerId())));
+	}
+
+	private Cart create(final String buyerId) {
+		return cartMapper.create(buyerId, List.of());
 	}
 
 }

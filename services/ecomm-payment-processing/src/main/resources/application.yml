@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: "@project.name@"
+    version: "@project.version@"
+  config:
+    import: 'optional:configserver:'
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  datasource:
+    url: jdbc:postgresql://host.docker.internal:5436/payments_db
+    username: user
+    password: pass
+  jpa:
+    database: POSTGRESQL
+    show-sql: true
+    properties:
+      '[hibernate.format_sql]': true
+  cloud:
+    function.definition: createSession
+    stream:
+      bindings:
+        createSession-in-0:
+          destination: ${Q_PYMT_REQUEST_CS:payment-request-checkout-session}
+        updateOrderStatus-out-0:
+          destination: ${Q_ORD_UPDATE_OS:order-update-order-status}
+        updateCartOrdered-out-0:
+          destination: ${Q_CRT_UPDATE_AO:cart-update-already-ordered}
+#  docker.compose:
+#    lifecycle-management: none
+#  cloud.refresh:
+#    extra-refreshable: com.zaxxer.hikari.HikariDataSource
+
+server.port: 8087
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client.service-url:
+    defaultZone: ${EUREKA_SERVER:http://localhost:8082/eureka/}
+
+logging.level:
+  '[org.hibernate.orm.jdbc.bind]': trace
+
+management:
+  endpoints.web:
+    exposure.include: '*'
+  endpoint.health:
+    show-details: always
+  metrics.distribution.percentiles-histogram:
+    '[http.server.requests]': true
+  observations.key-values:
+    application: ${spring.application.name}
+  tracing:
+    sampling.probability: 1.0
+  otlp.tracing:
+    endpoint: http://localhost:4317
+    transport: grpc
+
+springdoc:
+  swagger-ui:
+    path: /docs/payments
+  api-docs:
+    path: /docs/payments/api
+
+application.description: "@project.description@"
+gateway.url: ${URL_API_GATEWAY:http://localhost:8080}
+api.version: ${API_VERSION1:/api/v1}
+admin.path: ${PATH_ADMIN:/admin}
+webhooks.path: /webhooks
+payments.path: ${PATH_PYMT_MS:/payments}
+stripe.key: ${STRIPE_KEY:sk_test_123}
+success.url: https://txto.eu.org/sjNGP2
+stripe.webhook.secret: ${STRIPE_WEBHOOK_SECRET:whsec_123}

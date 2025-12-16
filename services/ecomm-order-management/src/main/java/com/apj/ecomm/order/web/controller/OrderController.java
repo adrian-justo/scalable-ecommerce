@@ -37,7 +37,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "Order API", description = "Endpoints for viewing and creating orders")
+@Tag(name = "Order Management API", description = "Endpoints for viewing and creating orders")
 @RestController
 @RequestMapping("${api.version}${orders.path}")
 @SecurityScheme(name = "authToken", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
@@ -80,8 +80,7 @@ public class OrderController {
 	@ApiResponses(value = { @ApiResponse(responseCode = "201", description = "Checkout order created successfully"),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
-			@ApiResponse(responseCode = "404", description = "Cart item" + AppConstants.MSG_NOT_FOUND,
-					content = @Content),
+			@ApiResponse(responseCode = "404", description = "Shopping cart is empty", content = @Content),
 			@ApiResponse(responseCode = "422", description = AppConstants.MSG_UNPROCESSABLE_ENTITY,
 					content = @Content) })
 	@PostMapping

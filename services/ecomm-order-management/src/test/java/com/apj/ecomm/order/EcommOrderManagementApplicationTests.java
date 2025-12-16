@@ -36,14 +36,17 @@ import com.apj.ecomm.order.constants.AppConstants;
 import com.apj.ecomm.order.domain.Status;
 import com.apj.ecomm.order.domain.model.OrderResponse;
 import com.apj.ecomm.order.web.client.cart.CartItemResponse;
-import com.apj.ecomm.order.web.messaging.AccountInformationDetails;
-import com.apj.ecomm.order.web.messaging.OrderedProductDetails;
-import com.apj.ecomm.order.web.messaging.ProductResponse;
-import com.apj.ecomm.order.web.messaging.ProductStockUpdate;
-import com.apj.ecomm.order.web.messaging.RequestAccountInformationEvent;
-import com.apj.ecomm.order.web.messaging.ReturnProductStockEvent;
-import com.apj.ecomm.order.web.messaging.UpdateCartItemsEvent;
-import com.apj.ecomm.order.web.messaging.UserResponse;
+import com.apj.ecomm.order.web.messaging.account.AccountInformationDetails;
+import com.apj.ecomm.order.web.messaging.account.PaymentTransferRequest;
+import com.apj.ecomm.order.web.messaging.account.RequestAccountInformationEvent;
+import com.apj.ecomm.order.web.messaging.account.UserResponse;
+import com.apj.ecomm.order.web.messaging.cart.UpdateCartItemsEvent;
+import com.apj.ecomm.order.web.messaging.payment.CheckoutSessionRequest;
+import com.apj.ecomm.order.web.messaging.payment.UpdateOrderStatusEvent;
+import com.apj.ecomm.order.web.messaging.product.OrderedProductDetails;
+import com.apj.ecomm.order.web.messaging.product.ProductResponse;
+import com.apj.ecomm.order.web.messaging.product.ProductStockUpdate;
+import com.apj.ecomm.order.web.messaging.product.ReturnProductStockEvent;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -205,13 +208,19 @@ class EcommOrderManagementApplicationTests {
 		assertEquals(1, products.size());
 		assertNotNull(products.getFirst().productDetail());
 
-		// 7. Send cart update for out of stock products and verify
+		// 7. Send checkout session request and verify
+		final var checkoutData = output.receive(100, "payment-request-checkout-session");
+		final var checkoutEvent = mapper.readValue(checkoutData.getPayload(), CheckoutSessionRequest.class);
+		assertEquals(1, checkoutEvent.orders().size());
+		assertEquals(order.id(), checkoutEvent.orders().getFirst().id());
+
+		// 8. Send cart update for out of stock products and verify
 		final var updateData = output.receive(100, "cart-update-item-quantity");
 		final var updateEvent = mapper.readValue(updateData.getPayload(), UpdateCartItemsEvent.class);
 		assertEquals(2, updateEvent.products().size());
 		assertEquals(product2.stock(), updateEvent.products().get(carts.get(1).productId()));
 
-		// 8. Create another checkout order request to verify product stock return event
+		// 9. Create another checkout order request to verify product stock return event
 		// and re-ordering
 		given().header(AppConstants.HEADER_USER_ID, buyerId)
 			.contentType("application/json")
@@ -228,6 +237,7 @@ class EcommOrderManagementApplicationTests {
 		input.send(MessageBuilder.withPayload(accountdetails).build(), "order-return-user-details");
 		output.receive(100, "product-update-stock-ordered");
 		input.send(MessageBuilder.withPayload(productDetails).build(), "order-return-product-details");
+		output.receive(100, "payment-request-checkout-session");
 		getResponse = given().header(AppConstants.HEADER_USER_ID, buyerId)
 			.when()
 			.get(apiVersion + path + "/" + order.id())
@@ -239,6 +249,19 @@ class EcommOrderManagementApplicationTests {
 			.asString();
 		final var order2 = mapper.readValue(getResponse, OrderResponse.class);
 		assertEquals(products, order2.products());
+	}
+
+	@Test
+	void message_updateStatusAndRequestTransfer() throws IOException {
+		final var buyerId = "buyer001";
+		final var productDetails = new UpdateOrderStatusEvent(buyerId, Status.CONFIRMED, "paymentIntentId");
+		input.send(MessageBuilder.withPayload(productDetails).build(), "order-update-order-status");
+
+		final var data = output.receive(100, "account-request-payment-transfer");
+		final var event = mapper.readValue(data.getPayload(), PaymentTransferRequest.class);
+		System.out.println(event);
+		assertEquals(2, event.transferDetails().size());
+		assertEquals(productDetails.paymentIntentId(), event.paymentIntentId());
 	}
 
 }

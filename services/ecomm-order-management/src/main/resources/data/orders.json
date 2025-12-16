@@ -33,7 +33,8 @@
           "price": 0.01
         }
       }
-    ]
+    ],
+    "status": "ACTIVE"
   },
   {
     "buyerId": "buyer001",
@@ -60,7 +61,8 @@
           "price": 129.99
         }
       }
-    ]
+    ],
+    "status": "ACTIVE"
   },
   {
     "buyerId": "buyer001",
@@ -87,6 +89,7 @@
           "price": 0.01
         }
       }
-    ]
+    ],
+    "status": "ACTIVE"
   }
 ]

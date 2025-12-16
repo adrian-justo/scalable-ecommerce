@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -16,9 +17,9 @@ import com.apj.ecomm.account.domain.model.CreateUserRequest;
 import com.apj.ecomm.account.domain.model.LoginRequest;
 import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
-import com.apj.ecomm.account.web.messaging.CreateCartEvent;
-import com.apj.ecomm.account.web.messaging.ShopNameUpdatedEvent;
-import com.apj.ecomm.account.web.messaging.ShopStatusUpdatedEvent;
+import com.apj.ecomm.account.web.messaging.cart.CreateCartEvent;
+import com.apj.ecomm.account.web.messaging.product.ShopNameUpdatedEvent;
+import com.apj.ecomm.account.web.messaging.product.ShopStatusUpdatedEvent;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -39,12 +40,14 @@ class AuthService implements IAuthService {
 
 	private final ApplicationEventPublisher eventPublisher;
 
+	private final PaymentProcessor processor;
+
 	private final UserMapper mapper;
 
 	public UserResponse register(final CreateUserRequest request) {
 		final var existing = getUserByEither(request.username(), request.email(), request.mobileNo());
 		if (existing.isEmpty())
-			return mapper.toResponse(repository.save(mapper.toEntity(request, encoder)));
+			return mapper.toResponse(save(mapper.toEntity(request, encoder)));
 		else
 			return update(request, existing.get());
 	}
@@ -77,7 +80,7 @@ class AuthService implements IAuthService {
 		final var updated = repository.save(user);
 
 		if (updated.getRoles().contains(Role.SELLER)) {
-			eventPublisher.publishEvent(new ShopStatusUpdatedEvent(updated.getId().toString(), Boolean.TRUE));
+			activateShop(updated.getAccountId(), updated.getId().toString());
 			if (isShopNameUpdated) {
 				final var shopId = mapper.toResponseNoIdentifier(updated).id();
 				eventPublisher.publishEvent(new ShopNameUpdatedEvent(shopId, shopName));
@@ -91,13 +94,36 @@ class AuthService implements IAuthService {
 			.authenticate(new UsernamePasswordAuthenticationToken(request.identifier(), request.password()));
 		if (auth.isAuthenticated()) {
 			final var user = (User) auth.getPrincipal();
+
 			if (user.getRoles().contains(Role.BUYER)) {
 				eventPublisher.publishEvent(new CreateCartEvent(user.getId().toString()));
 			}
-			return token.generate(user);
+
+			var accountId = user.getAccountId();
+			if (user.getRoles().contains(Role.SELLER)) {
+				if (StringUtils.isBlank(accountId)) {
+					accountId = save(user).getAccountId();
+				}
+				activateShop(accountId, user.getId().toString());
+			}
+
+			return token.generate(user, processor.getTransferStatus(accountId));
 		}
 		else
 			throw new BadCredentialsException("Credentials provided is incorrect");
+	}
+
+	private User save(final User user) {
+		if (user.getRoles().contains(Role.SELLER)) {
+			user.setAccountId(processor.create());
+		}
+		return repository.save(user);
+	}
+
+	private void activateShop(final String accountId, final String shopId) {
+		if (processor.transferEnabledFor(accountId)) {
+			eventPublisher.publishEvent(new ShopStatusUpdatedEvent(shopId, Boolean.TRUE));
+		}
 	}
 
 }

@@ -19,7 +19,7 @@ spring:
     properties:
       '[hibernate.format_sql]': true
   cloud:
-    function.definition: returnUserDetails
+    function.definition: returnUserDetails;createPaymentTransfer
     stream.bindings:
       syncShopName-out-0:
         destination: ${Q_PRD_SYNC_SN:product-sync-shop-name}
@@ -31,6 +31,8 @@ spring:
         destination: ${Q_ORD_RETURN_UD:order-return-user-details}
       syncShopStatus-out-0:
         destination: ${Q_PRD_SYNC_SS:product-sync-shop-status}
+      createPaymentTransfer-in-0:
+        destination: ${Q_ACT_REQUEST_PT:account-request-payment-transfer}
 #  docker.compose:
 #    lifecycle-management: none
 #  cloud.refresh:
@@ -69,11 +71,15 @@ springdoc:
     path: /docs/users/api
 
 application.description: "@project.description@"
-gateway.url: ${API_GATEWAY:http://localhost:8080}
-api.version: /api/v1
+gateway.url: ${URL_API_GATEWAY:http://localhost:8080}
+api.version: ${API_VERSION1:/api/v1}
 users.path: /users
 auth.path: /auth/
-products.path: /products
-carts.path: /carts
-orders.path: /orders
-shop.path: /shop
+products.path: ${PATH_PRD_MS:/products}
+carts.path: ${PATH_CRT_MS:/carts}
+shop.path: ${PATH_SHOP:/shop}
+orders.path: ${PATH_ORD_MS:/orders}
+payments.path: ${PATH_PYMT_MS:/payments}
+onboarding.path: ${PATH_PYMT_MS:/onboarding}
+stripe.key: ${STRIPE_KEY:sk_test_123}
+return.url: https://txto.eu.org/u1K8rh

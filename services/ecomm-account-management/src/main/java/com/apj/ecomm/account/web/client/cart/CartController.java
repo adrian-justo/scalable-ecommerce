@@ -8,7 +8,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.apj.ecomm.account.constants.AppConstants;
+import com.apj.ecomm.account.domain.IUserService;
+import com.apj.ecomm.account.domain.Role;
 import com.apj.ecomm.account.web.client.AccountClient;
+import com.apj.ecomm.account.web.util.AccessValidator;
 import com.apj.ecomm.account.web.util.PathValidator;
 
 import io.micrometer.observation.annotation.Observed;
@@ -34,16 +37,23 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CartController {
 
+	private final IUserService service;
+
 	private final AccountClient client;
 
 	@Operation(summary = "Shopping Cart Details", description = "View my shopping cart and its' details")
 	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Cart" + AppConstants.MSG_OK),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
-			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content) })
+			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Account" + AppConstants.MSG_NOT_FOUND + " / " + AppConstants.MSG_ACCESS_DENIED
+							+ "endpoint",
+					content = @Content) })
 	@GetMapping
 	public CartDetailResponse getCartOfBuyer(@PathVariable final String username,
 			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String buyerId) {
 		PathValidator.username(username);
+		AccessValidator.hasRole(Role.BUYER, service.findByUsername(username, buyerId));
 		return client.getCartOfBuyer(buyerId);
 	}
 

@@ -12,4 +12,6 @@ interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificati
 
 	List<Product> findAllByShopId(String shopId);
 
+	List<Product> findAllByShopIdAndActive(String shopId, boolean active);
+
 }

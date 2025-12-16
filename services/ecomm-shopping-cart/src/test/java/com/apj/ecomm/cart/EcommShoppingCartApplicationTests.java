@@ -39,8 +39,9 @@ import com.apj.ecomm.cart.domain.model.CartItemResponse;
 import com.apj.ecomm.cart.domain.model.CartResponse;
 import com.apj.ecomm.cart.domain.model.Paged;
 import com.apj.ecomm.cart.web.client.product.ProductResponse;
-import com.apj.ecomm.cart.web.messaging.CreateCartEvent;
-import com.apj.ecomm.cart.web.messaging.UpdateCartItemsEvent;
+import com.apj.ecomm.cart.web.messaging.account.CreateCartEvent;
+import com.apj.ecomm.cart.web.messaging.order.UpdateCartItemsEvent;
+import com.apj.ecomm.cart.web.messaging.payment.UpdateCartOrderedEvent;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -90,7 +91,6 @@ class EcommShoppingCartApplicationTests {
 	@BeforeAll
 	static void setUpBeforeClass() {
 		RestAssured.baseURI = "http://localhost";
-
 	}
 
 	@BeforeEach
@@ -164,7 +164,7 @@ class EcommShoppingCartApplicationTests {
 	}
 
 	@Test
-	void message_createIfNotExist() {
+	void create_add_order_cartItems() {
 		final var buyerId = "newBuyer";
 		given().header(AppConstants.HEADER_USER_ID, buyerId)
 			.when()
@@ -176,11 +176,23 @@ class EcommShoppingCartApplicationTests {
 		input.send(MessageBuilder.withPayload(new CreateCartEvent(buyerId)).build(), "cart-create-if-not-exist");
 
 		given().header(AppConstants.HEADER_USER_ID, buyerId)
+			.contentType("application/json")
+			.body(List.of(new CartItemRequest(1L)))
 			.when()
-			.get(apiVersion + path)
+			.post(apiVersion + path + productsPath)
 			.then()
 			.assertThat()
-			.statusCode(HttpStatus.OK);
+			.statusCode(HttpStatus.CREATED);
+
+		input.send(MessageBuilder.withPayload(new UpdateCartOrderedEvent(buyerId)).build(),
+				"cart-update-already-ordered");
+
+		given().header(AppConstants.HEADER_USER_ID, buyerId)
+			.when()
+			.get(apiVersion + path + productsPath + "/1")
+			.then()
+			.assertThat()
+			.statusCode(HttpStatus.NOT_FOUND);
 	}
 
 	@Test

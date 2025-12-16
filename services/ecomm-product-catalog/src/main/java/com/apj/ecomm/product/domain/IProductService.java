@@ -18,11 +18,13 @@ public interface IProductService {
 
 	ProductResponse findById(long id);
 
-	ProductResponse list(String shopId, String shopName, CreateProductRequest request);
+	ProductResponse list(String shopId, String shopName, String transferStatus, CreateProductRequest request);
 
 	ProductResponse update(long id, String shopId, UpdateProductRequest request);
 
 	List<Long> getProductsBy(String shopId);
+
+	List<Long> getProductsBy(String shopId, boolean active);
 
 	ProductResponse update(final Long id, final UpdateProductFromMessageRequest request);
 

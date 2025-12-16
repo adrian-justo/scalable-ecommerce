@@ -53,6 +53,9 @@ class AuthServiceTest {
 	@Mock
 	private ApplicationEventPublisher eventPublisher;
 
+	@Mock
+	private PaymentProcessor processor;
+
 	@Spy
 	private final UserMapper mapper = Mappers.getMapper(UserMapper.class);
 
@@ -80,6 +83,7 @@ class AuthServiceTest {
 
 		when(repository.findByUsernameOrEmailOrMobileNo(anyString(), anyString(), anyString()))
 			.thenReturn(Optional.empty());
+		when(processor.create()).thenReturn(user.getAccountId());
 		when(repository.save(any())).thenReturn(saved);
 
 		assertEquals(mapper.toResponse(saved), service.register(request));
@@ -104,7 +108,9 @@ class AuthServiceTest {
 
 		when(manager.authenticate(any()))
 			.thenReturn(UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
-		when(token.generate(any())).thenReturn("jwt.token.here");
+		when(processor.transferEnabledFor(anyString())).thenReturn(true);
+		when(processor.getTransferStatus(anyString())).thenReturn("active");
+		when(token.generate(any(), anyString())).thenReturn("jwt.token.here");
 
 		assertTrue(!service.login(request).isEmpty());
 	}

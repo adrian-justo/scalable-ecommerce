@@ -55,10 +55,14 @@ class ProductService implements IProductService {
 	}
 
 	@CachePut(value = "product", key = "#result.id()")
-	public ProductResponse list(final String shopId, final String shopName, final CreateProductRequest request) {
+	public ProductResponse list(final String shopId, final String shopName, final String transferStatus,
+			final CreateProductRequest request) {
 		final var product = mapper.toEntity(request);
 		product.setShopId(shopId);
 		product.setShopName(shopName);
+		if ("active".equals(transferStatus)) {
+			product.setActive(true);
+		}
 		return mapper.toResponse(repository.save(product));
 	}
 
@@ -75,7 +79,17 @@ class ProductService implements IProductService {
 	@Transactional(readOnly = true)
 	@Cacheable("catalog")
 	public List<Long> getProductsBy(final String shopId) {
-		return repository.findAllByShopId(shopId).stream().map(Product::getId).toList();
+		return getIds(repository.findAllByShopId(shopId));
+	}
+
+	@Transactional(readOnly = true)
+	@Cacheable("catalog")
+	public List<Long> getProductsBy(final String shopId, final boolean active) {
+		return getIds(repository.findAllByShopIdAndActive(shopId, active));
+	}
+
+	private List<Long> getIds(final List<Product> products) {
+		return products.stream().map(Product::getId).toList();
 	}
 
 	@CachePut(value = "product", key = "#result.id()")

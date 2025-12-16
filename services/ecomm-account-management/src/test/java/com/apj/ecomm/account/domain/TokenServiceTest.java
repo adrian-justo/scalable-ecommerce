@@ -43,7 +43,7 @@ class TokenServiceTest {
 
 	@Test
 	void generationSuccessful() {
-		assertFalse(service.generate(user).isBlank());
+		assertFalse(service.generate(user, "").isBlank());
 	}
 
 }

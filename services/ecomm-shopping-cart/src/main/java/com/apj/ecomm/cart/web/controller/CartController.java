@@ -42,7 +42,7 @@ import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Shopping Cart API",
 		description = "Endpoints for viewing and managing shopping cart items.<br>"
-				+ "Use the ../users/{username}/carts endpoint to view your shopping cart details.")
+				+ "To view your shopping cart details, find 'My Shopping Cart' in Account API.")
 @RestController
 @RequestMapping("${api.version}${carts.path}")
 @SecurityScheme(name = "authToken", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")

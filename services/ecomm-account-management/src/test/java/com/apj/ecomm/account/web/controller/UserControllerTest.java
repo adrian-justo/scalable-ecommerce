@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -52,6 +53,8 @@ class UserControllerTest {
 
 	private List<UserResponse> response;
 
+	private UserResponse userResponse;
+
 	@Autowired
 	private MockMvc mvc;
 
@@ -67,13 +70,14 @@ class UserControllerTest {
 		try (var inputStream = TypeReference.class.getResourceAsStream("/data/users.json")) {
 			response = mapper.readValue(inputStream, new TypeReference<List<UserResponse>>() {
 			});
+			userResponse = response.getFirst();
 		}
 
 	}
 
 	@Test
 	void accountDetails_getAll() throws Exception {
-		final var result = new Paged<>(response, 0, 10, 1, List.of(), response.size());
+		final var result = new Paged<>(new PageImpl<>(response));
 
 		when(service.findAll(any())).thenReturn(result);
 		final var action = mvc.perform(get(uri));
@@ -85,8 +89,6 @@ class UserControllerTest {
 
 	@Test
 	void accountDetails_getSpecific() throws Exception {
-		final var userResponse = response.getFirst();
-
 		when(service.findByUsername(anyString(), anyString())).thenReturn(userResponse);
 		final var action = mvc.perform(get(uri + "/admin123").header(AppConstants.HEADER_USER_ID, ""));
 
@@ -99,10 +101,6 @@ class UserControllerTest {
 	void accountManagement_success() throws Exception {
 		final var request = new UpdateUserRequest("updated@email.com", "+639031234567", null, null, null, null, null,
 				null);
-		final var user = response.getFirst();
-		final var userResponse = new UserResponse(user.id(), user.username(), request.email(), request.mobileNo(),
-				user.name(), user.shopName(), user.address(), user.roles(), user.notificationTypes(), user.createdAt(),
-				user.updatedAt(), user.active());
 
 		when(service.update(anyString(), any())).thenReturn(userResponse);
 		final var action = mvc.perform(

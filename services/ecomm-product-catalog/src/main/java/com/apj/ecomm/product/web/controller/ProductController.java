@@ -135,8 +135,9 @@ public class ProductController {
 	public ProductResponse listProduct(
 			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String shopId,
 			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_SHOP_NAME) final String shopName,
+			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_TRANSFER_STATUS) final String transferStatus,
 			@RequestBody @Valid final CreateProductRequest request) {
-		return service.list(shopId, shopName, request);
+		return service.list(shopId, shopName, transferStatus, request);
 	}
 
 	@Operation(summary = "Update Product", description = "Update details of a specific product")

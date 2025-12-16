@@ -10,7 +10,7 @@ spring:
     username: guest
     password: guest
   datasource:
-    url: jdbc:postgresql://host.docker.internal:5434/orders_db
+    url: jdbc:postgresql://host.docker.internal:5435/orders_db
     username: user
     password: pass
   jpa:
@@ -19,7 +19,7 @@ spring:
     properties:
       '[hibernate.format_sql]': true
   cloud:
-    function.definition: updateInformationAndSendStockUpdate;populateOrderItemDetail
+    function.definition: updateInformationAndSendStockUpdate;populateDetailAndRequestCheckout;updateStatusAndRequestTransfer
     stream:
       bindings:
         requestAccountInformation-out-0:
@@ -30,10 +30,16 @@ spring:
           destination: ${Q_PRD_UPDATE_SO:product-update-stock-ordered}
         updateCartItems-out-0:
           destination: ${Q_CRT_UPDATE_IQ:cart-update-item-quantity}
-        populateOrderItemDetail-in-0:
+        populateDetailAndRequestCheckout-in-0:
           destination: ${Q_ORD_RETURN_PD:order-return-product-details}
+        populateDetailAndRequestCheckout-out-0:
+          destination: ${Q_PYMT_REQUEST_CS:payment-request-checkout-session}
         returnProductStock-out-0:
           destination: ${Q_PRD_RETURN_SO:product-return-stock-ordered}
+        updateStatusAndRequestTransfer-in-0:
+          destination: ${Q_ORD_UPDATE_OS:order-update-order-status}
+        updateStatusAndRequestTransfer-out-0:
+          destination: ${Q_ACT_REQUEST_PT:account-request-payment-transfer}
 #  docker.compose:
 #    lifecycle-management: none
 #  cloud.refresh:
@@ -72,10 +78,10 @@ springdoc:
     path: /docs/orders/api
 
 application.description: "@project.description@"
-gateway.url: ${API_GATEWAY:http://localhost:8080}
-api.version: /api/v1
-admin.path: /admin
-shop.path: /shop
-orders.path: /orders
-carts.path: /carts
-products.path: /products
+gateway.url: ${URL_API_GATEWAY:http://localhost:8080}
+api.version: ${API_VERSION1:/api/v1}
+admin.path: ${PATH_ADMIN:/admin}
+shop.path: ${PATH_SHOP:/shop}
+orders.path: ${PATH_ORD_MS:/orders}
+carts.path: ${PATH_CRT_MS:/carts}
+products.path: ${PATH_PRD_MS:/products}

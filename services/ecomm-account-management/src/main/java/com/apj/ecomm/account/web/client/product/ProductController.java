@@ -11,9 +11,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.apj.ecomm.account.constants.AppConstants;
+import com.apj.ecomm.account.domain.IUserService;
+import com.apj.ecomm.account.domain.Role;
 import com.apj.ecomm.account.domain.model.Paged;
 import com.apj.ecomm.account.web.client.AccountClient;
 import com.apj.ecomm.account.web.exception.ResourceAccessDeniedException;
+import com.apj.ecomm.account.web.util.AccessValidator;
 import com.apj.ecomm.account.web.util.PathValidator;
 
 import io.micrometer.observation.annotation.Observed;
@@ -38,17 +41,24 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ProductController {
 
+	private final IUserService service;
+
 	private final AccountClient client;
 
 	@Operation(summary = "Product Catalog", description = "View all my products")
 	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Products" + AppConstants.MSG_OK),
 			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
-			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content) })
+			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
+			@ApiResponse(responseCode = "404",
+					description = "Account" + AppConstants.MSG_NOT_FOUND + " / " + AppConstants.MSG_ACCESS_DENIED
+							+ "endpoint",
+					content = @Content) })
 	@GetMapping
 	public Paged<ProductResponse> getAllProductsOfSeller(@PathVariable final String username,
 			@Parameter(hidden = true) @RequestHeader(AppConstants.HEADER_USER_ID) final String shopId,
 			@ParameterObject @PageableDefault(page = 0, size = 10, sort = "createdAt") final Pageable pageable) {
 		PathValidator.username(username);
+		AccessValidator.hasRole(Role.SELLER, service.findByUsername(username, shopId));
 		return client.getAllProducts("stock>0;shopId:" + shopId, pageable);
 	}
 
@@ -58,7 +68,7 @@ public class ProductController {
 			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content),
 			@ApiResponse(responseCode = "404",
 					description = "Product" + AppConstants.MSG_NOT_FOUND + " / " + AppConstants.MSG_ACCESS_DENIED
-							+ "product",
+							+ "product/endpoint",
 					content = @Content) })
 	@GetMapping("/{productId}")
 	public ProductResponse getProductOfSellerById(@PathVariable final String username,
@@ -66,6 +76,7 @@ public class ProductController {
 			@PathVariable final long productId) {
 		PathValidator.username(username);
 		PathValidator.productId(productId);
+		AccessValidator.hasRole(Role.SELLER, service.findByUsername(username, shopId));
 
 		final var response = client.getProductById(productId);
 		if (!response.shopId().equals(shopId))

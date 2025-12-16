@@ -26,7 +26,7 @@ public final class AppConstants {
 
 	public static final int PRICE_SCALE = 2;
 
-	public static final String PRICE_DEFAULT = "0.01";
+	public static final String PRICE_DEFAULT = "0.5";
 
 	public static final String IMAGE_DEFAULT = "https://placehold.co/300";
 
@@ -35,5 +35,7 @@ public final class AppConstants {
 	public static final String HEADER_USER_ID = "ecomm-user-id";
 
 	public static final String HEADER_SHOP_NAME = "ecomm-shop-name";
+
+	public static final String HEADER_TRANSFER_STATUS = "ecomm-transfer-status";
 
 }
