@@ -9,5 +9,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record UserResponse(String id, String username, String email, String mobileNo, String name, String shopName,
-		String address, Set<Role> roles, Set<NotificationType> notificationTypes, Instant createdAt, Instant updatedAt,
-		Boolean active) {}
+		String address, Set<Role> roles, Set<NotificationType> notificationTypes, String accountId, Instant createdAt,
+		Instant updatedAt, Boolean active) {
+}

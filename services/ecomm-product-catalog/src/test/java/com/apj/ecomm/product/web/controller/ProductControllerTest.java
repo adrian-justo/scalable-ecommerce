@@ -134,9 +134,11 @@ class ProductControllerTest {
 		final var productResponse = new ProductResponse(5L, request.name(), shopId, shopName, request.description(),
 				request.images(), request.categories(), request.stock(), request.price());
 
-		when(service.list(anyString(), anyString(), any(CreateProductRequest.class))).thenReturn(productResponse);
+		when(service.list(anyString(), anyString(), anyString(), any(CreateProductRequest.class)))
+			.thenReturn(productResponse);
 		final var action = mvc.perform(post(uri).header(AppConstants.HEADER_USER_ID, shopId)
 			.header(AppConstants.HEADER_SHOP_NAME, shopName)
+			.header(AppConstants.HEADER_TRANSFER_STATUS, "active")
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)));
 
@@ -161,6 +163,7 @@ class ProductControllerTest {
 
 		mvc.perform(post(uri).header(AppConstants.HEADER_USER_ID, "SHP001")
 			.header(AppConstants.HEADER_SHOP_NAME, "Shop Name")
+			.header(AppConstants.HEADER_TRANSFER_STATUS, "active")
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(mapper.writeValueAsString(request)))
 			.andExpect(result -> assertTrue(result.getResolvedException() instanceof MethodArgumentNotValidException));

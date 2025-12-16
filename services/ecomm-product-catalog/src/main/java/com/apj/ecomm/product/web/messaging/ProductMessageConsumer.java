@@ -11,6 +11,11 @@ import org.springframework.context.annotation.Configuration;
 import com.apj.ecomm.product.domain.IProductService;
 import com.apj.ecomm.product.domain.model.ProductResponse;
 import com.apj.ecomm.product.domain.model.UpdateProductFromMessageRequest;
+import com.apj.ecomm.product.web.messaging.account.ShopNameUpdatedEvent;
+import com.apj.ecomm.product.web.messaging.account.ShopStatusUpdatedEvent;
+import com.apj.ecomm.product.web.messaging.order.OrderedProductDetails;
+import com.apj.ecomm.product.web.messaging.order.ProductStockUpdate;
+import com.apj.ecomm.product.web.messaging.order.ReturnProductStockEvent;
 import com.apj.ecomm.product.web.util.Executor;
 
 import lombok.RequiredArgsConstructor;
@@ -57,7 +62,7 @@ public class ProductMessageConsumer {
 
 	@Bean
 	Consumer<ShopStatusUpdatedEvent> syncShopStatus() {
-		return data -> service.getProductsBy(data.shopId())
+		return data -> service.getProductsBy(data.shopId(), !data.active())
 			.forEach(id -> executor.lockFor(id,
 					() -> service.update(id, new UpdateProductFromMessageRequest(data.active()))));
 	}

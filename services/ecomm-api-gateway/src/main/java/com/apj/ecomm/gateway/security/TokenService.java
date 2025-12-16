@@ -51,6 +51,7 @@ class TokenService {
 			.roles((List<String>) claims.get("roles"))
 			.userId((String) claims.get("userId"))
 			.shopName((String) claims.get("shopName"))
+			.transferStatus((String) claims.get("transferStatus"))
 			.build();
 	}
 

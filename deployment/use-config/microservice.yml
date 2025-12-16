@@ -23,6 +23,10 @@ x-redis: &redis
 x-jwt: &jwt
   SECRET_KEY: ${SECRET_KEY:-gEn3r8EdK3y} # Generate key in Account Management TokenServiceTest class
 
+x-stripe: &stripe
+  STRIPE_KEY: ${STRIPE_KEY}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+
 x-common-config: &common-config
   restart: unless-stopped
   networks: 
@@ -94,7 +98,7 @@ services:
     ports: 
       - "8083:8083"
     environment:
-      <<: [*common-env, *config-id, *config-retry, *eureka, *jwt]
+      <<: [*common-env, *config-id, *config-retry, *eureka, *jwt, *stripe]
       SERVER_PORT: 8083
       SPRING_CLOUD_CONFIG_NAME: database,monitoring
       SPRING_DATASOURCE_URL: jdbc:postgresql://account-postgres:5432/users_db
@@ -128,7 +132,7 @@ services:
     ports: 
       - "8085:8085"
     environment:
-      <<: [*common-env, *config-id, *config-retry, *eureka, *redis]
+      <<: [*common-env, *config-id, *config-retry, *eureka]
       SERVER_PORT: 8085
       SPRING_CLOUD_CONFIG_NAME: database,monitoring
       SPRING_DATASOURCE_URL: jdbc:postgresql://cart-postgres:5432/carts_db
@@ -145,7 +149,7 @@ services:
     ports: 
       - "8086:8086"
     environment:
-      <<: [*common-env, *config-id, *config-retry, *eureka, *redis]
+      <<: [*common-env, *config-id, *config-retry, *eureka]
       SERVER_PORT: 8086
       SPRING_CLOUD_CONFIG_NAME: database,monitoring
       SPRING_DATASOURCE_URL: jdbc:postgresql://order-postgres:5432/orders_db
@@ -153,5 +157,22 @@ services:
       api-gateway:
         condition: service_healthy
       order-postgres:
+        condition: service_healthy
+    <<: [*common-config, *health-chk]
+    
+  payment-processing:
+    build: ../services/ecomm-payment-processing
+    container_name: ecomm-payment-processing
+    ports: 
+      - "8087:8087"
+    environment:
+      <<: [*common-env, *config-id, *config-retry, *eureka, *stripe]
+      SERVER_PORT: 8087
+      SPRING_CLOUD_CONFIG_NAME: database,monitoring
+      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-postgres:5432/payments_db
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      payment-postgres:
         condition: service_healthy
     <<: [*common-config, *health-chk]

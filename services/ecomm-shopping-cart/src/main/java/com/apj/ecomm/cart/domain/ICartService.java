@@ -26,4 +26,6 @@ public interface ICartService {
 
 	void deleteItems(String buyerId, List<Long> productIds);
 
+	void updateCartOrdered(String buyerId);
+
 }

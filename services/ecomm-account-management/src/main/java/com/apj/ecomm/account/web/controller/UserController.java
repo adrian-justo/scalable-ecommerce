@@ -24,6 +24,7 @@ import com.apj.ecomm.account.web.util.PathValidator;
 import com.apj.ecomm.account.web.util.RequestValidator;
 
 import io.micrometer.observation.annotation.Observed;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
@@ -36,7 +37,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "Account API", description = "Endpoints for viewing of account details and account management")
+@Tag(name = "Account API", description = "Endpoints for viewing and managing accounts")
 @RestController
 @RequestMapping("${api.version}${users.path}")
 @SecurityScheme(name = "authToken", type = SecuritySchemeType.HTTP, bearerFormat = "JWT", scheme = "bearer")
@@ -48,11 +49,7 @@ public class UserController {
 
 	private final IUserService service;
 
-	@Operation(summary = "Accounts Audit",
-			description = "View details of all accounts. Only an administrator can access this endpoint")
-	@ApiResponses(value = { @ApiResponse(responseCode = "200", description = "Accounts" + AppConstants.MSG_OK),
-			@ApiResponse(responseCode = "400", description = AppConstants.MSG_BAD_REQUEST, content = @Content),
-			@ApiResponse(responseCode = "403", description = AppConstants.MSG_FORBIDDEN, content = @Content) })
+	@Hidden
 	@GetMapping
 	public Paged<UserResponse> getAllUsers(
 			@ParameterObject @PageableDefault(page = 0, size = 10) final Pageable pageable) {

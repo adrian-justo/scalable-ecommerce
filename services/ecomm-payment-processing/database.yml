@@ -1,0 +1,18 @@
+services:
+  payment-postgres:
+    image: postgres
+    container_name: payment-postgres
+    environment:
+      POSTGRES_DB: payments_db
+      POSTGRES_USER: ${PAYMENT_PG_USER:-user}
+      POSTGRES_PASSWORD: ${PAYMENT_PG_PASSWORD:-pass}
+    ports:
+      - 5436:5432
+    restart: unless-stopped
+    networks:
+      - ecomm-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

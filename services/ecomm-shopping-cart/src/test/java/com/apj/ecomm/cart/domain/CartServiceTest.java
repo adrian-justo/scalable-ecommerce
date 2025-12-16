@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,7 +82,7 @@ class CartServiceTest {
 			.map(p -> new ProductResponse(p.getProductId(), null, null, null, null, null, null, null, null))
 			.toList();
 
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		when(client.getAllProducts(anyString(), any(Pageable.class))).thenReturn(new Paged<>(new PageImpl<>(products)));
 
 		assertEquals(products.size(), service.findCartBy(buyerId).products().size());
@@ -89,7 +90,7 @@ class CartServiceTest {
 
 	@Test
 	void findItemsByBuyerId() {
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		assertEquals(cartItems.stream().map(mapper::toResponse).toList(), service.findItemsBy(buyerId));
 	}
 
@@ -99,7 +100,7 @@ class CartServiceTest {
 		final var product = new ProductResponse(item.getProductId(), null, null, null, null, null, null, null,
 				BigDecimal.ONE);
 
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		when(client.getAllProducts(anyString(), any(Pageable.class)))
 			.thenReturn(new Paged<>(new PageImpl<>(List.of(product))));
 
@@ -108,7 +109,7 @@ class CartServiceTest {
 
 	@Test
 	void findItemByProductId_notFound() {
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		assertThrows(ResourceNotFoundException.class, () -> service.findItemBy(1L, buyerId));
 	}
 
@@ -126,7 +127,7 @@ class CartServiceTest {
 				new CartItemRequest(item2.getProductId(), item2.getQuantity()), new CartItemRequest(4L));
 		item2.setQuantity(product2.stock());
 
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		when(client.getAllProducts(anyString(), any(Pageable.class)))
 			.thenReturn(new Paged<>(new PageImpl<>(List.of(product1, product2))));
 		when(repository.saveAll(ArgumentMatchers.<List<CartItem>>any())).thenReturn(List.of(item1, item2));
@@ -147,7 +148,7 @@ class CartServiceTest {
 		item.setQuantity(requestItem.quantity());
 		final var request = List.of(requestItem);
 
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		when(client.getAllProducts(anyString(), any(Pageable.class)))
 			.thenReturn(new Paged<>(new PageImpl<>(List.of(product))));
 		when(repository.saveAll(ArgumentMatchers.<List<CartItem>>any())).thenReturn(List.of(item));
@@ -162,7 +163,7 @@ class CartServiceTest {
 		final var item2 = cartItems.get(1);
 		final var products = Map.of(item1.getProductId(), 1, item2.getProductId(), 0);
 
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		when(repository.saveAll(ArgumentMatchers.<List<CartItem>>any())).thenReturn(List.of(item1));
 		when(cartRepository.save(any(Cart.class))).thenReturn(cart);
 
@@ -173,11 +174,18 @@ class CartServiceTest {
 
 	@Test
 	void deleteItems() {
-		when(cartRepository.findAllByBuyerId(anyString())).thenReturn(List.of(cart));
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
 		when(cartRepository.save(any(Cart.class))).thenReturn(cart);
 
 		service.deleteItems(buyerId, List.of(1L, 2L));
 		verify(cartRepository, times(1)).save(cart);
+	}
+
+	@Test
+	void updateCartOrdered() {
+		when(cartRepository.findByBuyerIdAndActiveTrue(anyString())).thenReturn(Optional.of(cart));
+		service.updateCartOrdered(buyerId);
+		verify(cartRepository, times(1)).saveAll(List.of(cart, cartMapper.create(buyerId, List.of())));
 	}
 
 }

@@ -45,11 +45,11 @@ import com.apj.ecomm.account.domain.model.UserResponse;
 import com.apj.ecomm.account.web.client.cart.CartDetailResponse;
 import com.apj.ecomm.account.web.client.cart.CartItemDetail;
 import com.apj.ecomm.account.web.client.product.ProductResponse;
-import com.apj.ecomm.account.web.messaging.AccountInformationDetails;
-import com.apj.ecomm.account.web.messaging.CreateCartEvent;
-import com.apj.ecomm.account.web.messaging.RequestAccountInformationEvent;
-import com.apj.ecomm.account.web.messaging.ShopNameUpdatedEvent;
-import com.apj.ecomm.account.web.messaging.ShopStatusUpdatedEvent;
+import com.apj.ecomm.account.web.messaging.cart.CreateCartEvent;
+import com.apj.ecomm.account.web.messaging.order.AccountInformationDetails;
+import com.apj.ecomm.account.web.messaging.order.RequestAccountInformationEvent;
+import com.apj.ecomm.account.web.messaging.product.ShopNameUpdatedEvent;
+import com.apj.ecomm.account.web.messaging.product.ShopStatusUpdatedEvent;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -144,8 +144,8 @@ class EcommAccountManagementApplicationTests {
 		given().when().delete(apiVersion + usersPath + username).then().assertThat().statusCode(HttpStatus.NO_CONTENT);
 
 		// 3. Deactivate products of seller and verify
-		var data = output.receive(100, "product-sync-shop-status");
-		var details = mapper.readValue(data.getPayload(), ShopStatusUpdatedEvent.class);
+		final var data = output.receive(100, "product-sync-shop-status");
+		final var details = mapper.readValue(data.getPayload(), ShopStatusUpdatedEvent.class);
 		assertFalse(details.active());
 
 		// 4. Verify account deletion
@@ -170,13 +170,8 @@ class EcommAccountManagementApplicationTests {
 			.assertThat()
 			.statusCode(HttpStatus.CREATED);
 
-		// 6. Reactivate products of seller and verify
-		data = output.receive(100, "product-sync-shop-status");
-		details = mapper.readValue(data.getPayload(), ShopStatusUpdatedEvent.class);
-		assertTrue(details.active());
-
-		// 7. Verify account reactivation
-		given().header(AppConstants.HEADER_USER_ID, user.id().toString())
+		// 6. Verify account reactivation
+		given().header(AppConstants.HEADER_USER_ID, user.id())
 			.when()
 			.get(apiVersion + usersPath + username)
 			.then()
@@ -235,17 +230,28 @@ class EcommAccountManagementApplicationTests {
 
 	@Test
 	void client_getCartOfBuyer() throws JSONException, JsonProcessingException {
-		final var userId = "SHP001";
-		final var clientResponse = mapper.writeValueAsString(new CartDetailResponse(List.of(new CartItemDetail(
-				new ProductResponse(1L, "Item 1", userId, "Shop 1", "Desc 1", List.of(), Set.of(), 1, BigDecimal.ONE),
-				1))));
+		final var userPath = "/buyer001";
+		var response = given().header(AppConstants.HEADER_USER_ID, "")
+			.when()
+			.get(apiVersion + usersPath + userPath)
+			.then()
+			.assertThat()
+			.statusCode(HttpStatus.OK)
+			.extract()
+			.body()
+			.asString();
+		final var user = mapper.readValue(response, UserResponse.class);
+
+		final var clientResponse = mapper
+			.writeValueAsString(new CartDetailResponse(List.of(new CartItemDetail(new ProductResponse(1L, "Item 1",
+					user.id(), "Shop 1", "Desc 1", List.of(), Set.of(), 1, BigDecimal.ONE), 1))));
 		clientMock.stubFor(get(urlMatching(apiVersion + cartsPath)).willReturn(aResponse().withStatus(HttpStatus.OK)
 			.withHeader("Content-Type", "application/json")
 			.withBody(clientResponse)));
 
-		final var response = given().header(AppConstants.HEADER_USER_ID, userId)
+		response = given().header(AppConstants.HEADER_USER_ID, user.id())
 			.when()
-			.get(apiVersion + usersPath + username + cartsPath)
+			.get(apiVersion + usersPath + userPath + cartsPath)
 			.then()
 			.assertThat()
 			.statusCode(HttpStatus.OK)

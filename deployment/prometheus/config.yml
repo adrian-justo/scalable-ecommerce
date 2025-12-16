@@ -37,3 +37,10 @@ scrape_configs:
       - targets: ['ecomm-order-management:8086']
         labels:
           application: 'Order Management Microservice'
+          
+  - job_name: 'ecomm-payment-processing'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['ecomm-payment-processing:8087']
+        labels:
+          application: 'Payment Processing Microservice'

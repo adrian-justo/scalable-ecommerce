@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -20,8 +21,8 @@ import com.apj.ecomm.account.web.client.AccountClient;
 import com.apj.ecomm.account.web.exception.ActiveOrderExistsException;
 import com.apj.ecomm.account.web.exception.AlreadyRegisteredException;
 import com.apj.ecomm.account.web.exception.ResourceNotFoundException;
-import com.apj.ecomm.account.web.messaging.ShopNameUpdatedEvent;
-import com.apj.ecomm.account.web.messaging.ShopStatusUpdatedEvent;
+import com.apj.ecomm.account.web.messaging.product.ShopNameUpdatedEvent;
+import com.apj.ecomm.account.web.messaging.product.ShopStatusUpdatedEvent;
 
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,8 @@ class UserService implements IUserService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	private final PasswordEncoder encoder;
+
+	private final PaymentProcessor processor;
 
 	private final UserMapper mapper;
 
@@ -78,23 +81,30 @@ class UserService implements IUserService {
 	}
 
 	private UserResponse update(final User existing, final UpdateUserRequest request) {
-		final var forPublish = forProductDeactivation(existing, request);
-		final var shopName = request.shopName();
-		final var isShopNameUpdated = shopName != null && !shopName.equals(existing.getShopName());
+		final var forDeactivation = forProductDeactivation(existing, request.roles());
+		final var noExistingSellerRole = !existing.getRoles().contains(Role.SELLER);
+		final var requestShopName = request.shopName();
+		final var shopNameUpdated = requestShopName != null && !requestShopName.equals(existing.getShopName());
 
 		final var updated = repository.save(mapper.updateEntity(request, existing, encoder));
-		if (forPublish) {
-			deactivateProducts(updated);
+		if (forDeactivation) {
+			publishShopStatusUpdate(updated, Boolean.FALSE);
 		}
-		else if (updated.getShopName() != null && isShopNameUpdated) {
-			final var shopId = mapper.toResponseNoIdentifier(updated).id();
-			eventPublisher.publishEvent(new ShopNameUpdatedEvent(shopId, shopName));
+		else {
+			if (noExistingSellerRole && updated.getRoles().contains(Role.SELLER)
+					&& processor.transferEnabledFor(updated.getAccountId())) {
+				publishShopStatusUpdate(updated, Boolean.TRUE);
+			}
+			if (updated.getShopName() != null && shopNameUpdated) {
+				final var shopId = mapper.toResponseNoIdentifier(updated).id();
+				eventPublisher.publishEvent(new ShopNameUpdatedEvent(shopId, requestShopName));
+			}
 		}
 		return mapper.toResponse(updated);
 	}
 
-	private boolean forProductDeactivation(final User existing, final UpdateUserRequest request) {
-		return forProductDeactivation(existing, request.roles() != null && !request.roles().contains(Role.SELLER));
+	private boolean forProductDeactivation(final User existing, final Set<Role> roles) {
+		return forProductDeactivation(existing, roles != null && !roles.contains(Role.SELLER));
 	}
 
 	public void deleteByUsername(final String username) {
@@ -108,7 +118,7 @@ class UserService implements IUserService {
 		user.setActive(false);
 		repository.save(user);
 		if (forPublish) {
-			deactivateProducts(user);
+			publishShopStatusUpdate(user, Boolean.FALSE);
 		}
 	}
 
@@ -123,8 +133,8 @@ class UserService implements IUserService {
 		return forDeactivation;
 	}
 
-	private void deactivateProducts(final User user) {
-		eventPublisher.publishEvent(new ShopStatusUpdatedEvent(user.getId().toString(), Boolean.FALSE));
+	private void publishShopStatusUpdate(final User user, final Boolean active) {
+		eventPublisher.publishEvent(new ShopStatusUpdatedEvent(user.getId().toString(), active));
 	}
 
 	private Optional<User> findByActive(final String username) {
@@ -135,11 +145,14 @@ class UserService implements IUserService {
 		return repository.findByUsername(username);
 	}
 
-	public Map<String, UserResponse> findAllBy(final List<UUID> ids) {
-		return repository.findAllById(ids)
-			.stream()
+	public Map<String, UserResponse> getDetails(final Set<String> ids) {
+		return findAllBy(ids).stream()
 			.filter(User::isActive)
 			.collect(Collectors.toMap(user -> user.getId().toString(), mapper::toResponse));
+	}
+
+	public List<User> findAllBy(final Set<String> ids) {
+		return repository.findAllById(ids.stream().map(UUID::fromString).toList());
 	}
 
 }

@@ -32,9 +32,10 @@ import com.apj.ecomm.order.web.client.cart.CartItemResponse;
 import com.apj.ecomm.order.web.exception.OrderStillProcessingException;
 import com.apj.ecomm.order.web.exception.ResourceAccessDeniedException;
 import com.apj.ecomm.order.web.exception.ResourceNotFoundException;
-import com.apj.ecomm.order.web.messaging.ProductResponse;
-import com.apj.ecomm.order.web.messaging.ProductStockUpdate;
-import com.apj.ecomm.order.web.messaging.UserResponse;
+import com.apj.ecomm.order.web.messaging.account.UserResponse;
+import com.apj.ecomm.order.web.messaging.payment.CheckoutSessionRequest;
+import com.apj.ecomm.order.web.messaging.product.ProductResponse;
+import com.apj.ecomm.order.web.messaging.product.ProductStockUpdate;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -132,7 +133,7 @@ class OrderServiceTest {
 
 	@Test
 	void updateInformationAndGetStockUpdate() {
-		final var userInformation = Map.of(order.getBuyerId(),
+		final var userInformation = Map.of(buyerId,
 				new UserResponse(order.getDeliveryInformation().getName(), null,
 						order.getDeliveryInformation().getAddress(), order.getDeliveryInformation().getEmail(), null),
 				order.getShopId(), new UserResponse(null, order.getShopInformation().getName(),
@@ -144,20 +145,19 @@ class OrderServiceTest {
 		final var products = order.getProducts()
 			.stream()
 			.collect(Collectors.toMap(OrderItem::getProductId, OrderItem::getQuantity));
-		assertEquals(new ProductStockUpdate(order.getBuyerId(), products),
-				service.updateInformationAndGetStockUpdate(order.getBuyerId(), userInformation));
+		assertEquals(new ProductStockUpdate(buyerId, products),
+				service.updateInformationAndGetStockUpdate(buyerId, userInformation));
 	}
 
 	@Test
 	void updateInformationAndGetStockUpdate_inactiveSeller() {
-		final var userInformation = Map.of(order.getBuyerId(),
-				new UserResponse(order.getDeliveryInformation().getName(), null,
-						order.getDeliveryInformation().getAddress(), order.getDeliveryInformation().getEmail(), null));
+		final var userInformation = Map.of(buyerId, new UserResponse(order.getDeliveryInformation().getName(), null,
+				order.getDeliveryInformation().getAddress(), order.getDeliveryInformation().getEmail(), null));
 
 		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of());
 
-		assertNull(service.updateInformationAndGetStockUpdate(order.getBuyerId(), userInformation));
+		assertNull(service.updateInformationAndGetStockUpdate(buyerId, userInformation));
 	}
 
 	@Test
@@ -172,7 +172,9 @@ class OrderServiceTest {
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
 		when(itemRepository.saveAll(ArgumentMatchers.<List<OrderItem>>any())).thenReturn(order.getProducts());
 
-		assertEquals(order.getProducts(), service.populateOrderItemDetail(order.getBuyerId(), details));
+		order.setStatus(Status.ACTIVE.toString());
+		assertEquals(new CheckoutSessionRequest(List.of(mapper.toResponse(order))),
+				service.populateDetailAndRequestCheckout(buyerId, details));
 	}
 
 	@Test
@@ -187,7 +189,22 @@ class OrderServiceTest {
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of());
 		when(itemRepository.saveAll(ArgumentMatchers.<List<OrderItem>>any())).thenReturn(List.of());
 
-		assertEquals(List.of(), service.populateOrderItemDetail(order.getBuyerId(), details));
+		assertNull(service.populateDetailAndRequestCheckout(buyerId, details));
+	}
+
+	@Test
+	void updateStatusAndGetDetails() {
+		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
+		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
+		assertEquals(Map.of(order.getShopId(), order.getTotal()),
+				service.updateStatusAndGetDetails(buyerId, Status.CONFIRMED));
+	}
+
+	@Test
+	void updateStatusAndGetDetails_inactive() {
+		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
+		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
+		assertNull(service.updateStatusAndGetDetails(buyerId, Status.INACTIVE));
 	}
 
 }

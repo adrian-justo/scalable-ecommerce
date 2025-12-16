@@ -23,8 +23,8 @@ import com.apj.ecomm.order.domain.model.OrderItemDetailResponse;
 import com.apj.ecomm.order.domain.model.OrderItemResponse;
 import com.apj.ecomm.order.domain.model.OrderResponse;
 import com.apj.ecomm.order.web.client.cart.CartItemResponse;
-import com.apj.ecomm.order.web.messaging.ProductResponse;
-import com.apj.ecomm.order.web.messaging.UserResponse;
+import com.apj.ecomm.order.web.messaging.account.UserResponse;
+import com.apj.ecomm.order.web.messaging.product.ProductResponse;
 
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE,
 		nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)

@@ -25,11 +25,12 @@ class TokenService {
 	@Value("${secret.key:}")
 	private String secretKey;
 
-	String generate(final User user) {
+	String generate(final User user, final String transferStatus) {
 		final var claims = new HashMap<String, Object>();
 		claims.put("roles", user.getRoles());
 		claims.put("userId", user.getId().toString());
 		claims.put("shopName", user.getShopName());
+		claims.put("transferStatus", transferStatus);
 		// Any other claims to be used as request header must also be added in
 		// AuthFilter class of API Gateway
 		return Jwts.builder()

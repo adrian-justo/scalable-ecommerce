@@ -18,6 +18,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.apj.ecomm.account.constants.AppConstants;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import feign.FeignException;
 
 @RestControllerAdvice
 class AccountExceptionHandler {
@@ -66,6 +70,23 @@ class AccountExceptionHandler {
 					.stream()
 					.collect(Collectors.groupingBy(FieldError::getField,
 							Collectors.mapping(FieldError::getDefaultMessage, Collectors.toList()))));
+	}
+
+	@ExceptionHandler(FeignException.class)
+	ProblemDetail handle(final FeignException e) {
+		return getDetail(HttpStatus.valueOf(e.status()), getSource(e.getMessage()));
+	}
+
+	private String getSource(final String message) {
+		try {
+			final var map = new ObjectMapper().readValue(message.split("[\\[\\]]")[9].replace("\\", ""),
+					new TypeReference<Map<String, Object>>() {
+					});
+			return (String) map.get("title");
+		}
+		catch (final Exception ex) {
+			return message;
+		}
 	}
 
 	@ExceptionHandler({ HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class })

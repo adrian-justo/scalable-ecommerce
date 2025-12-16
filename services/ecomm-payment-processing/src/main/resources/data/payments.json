@@ -1,0 +1,10 @@
+[
+  {
+    "buyerId": "buyer001",
+    "sessionId": "cs_test_a1XPghleCKIPYHVi9oAwo9pcILSmQkIiDlmp3BbPFGAKa2elMKIv9JgTr8",
+    "currency": "usd",
+    "amount": 51997,
+    "sessionUrl": "https://checkout.stripe.com/c/pay/cs_test_a1XPghleCKIPYHVi9oAwo9pcILSmQkIiDlmp3BbPFGAKa2elMKIv9JgTr8#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdkdWxOYHwnPyd1blpxYHZxWjA0VlRyaVRJaH1IazZPXDNXPHBhZ25fYHFQYj1WZnA3UkBEUkxRREZHYURpXWFxTkZSb2JucTxLUHRQZEppZ08zYHJ%2FaEQ9QFV8ZjN9YEJuQFdLUkRGUmo1NTVEb31nU1JvdycpJ2N3amhWYHdzYHcnP3F3cGApJ2dkZm5id2pwa2FGamlqdyc%2FJyZjY2NjY2MnKSdpZHxqcHFRfHVgJz8ndmxrYmlgWmxxYGgnKSdga2RnaWBVaWRmYG1qaWFgd3YnP3F3cGB4JSUl",
+    "status": "open"
+  }
+]

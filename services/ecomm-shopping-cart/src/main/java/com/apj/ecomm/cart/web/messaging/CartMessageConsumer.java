@@ -6,6 +6,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.apj.ecomm.cart.domain.ICartService;
+import com.apj.ecomm.cart.web.messaging.account.CreateCartEvent;
+import com.apj.ecomm.cart.web.messaging.order.UpdateCartItemsEvent;
+import com.apj.ecomm.cart.web.messaging.payment.UpdateCartOrderedEvent;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,6 +26,11 @@ public class CartMessageConsumer {
 	@Bean
 	Consumer<UpdateCartItemsEvent> updateCartItems() {
 		return data -> service.updateItemsFromEvent(data.buyerId(), data.products());
+	}
+
+	@Bean
+	Consumer<UpdateCartOrderedEvent> updateCartOrdered() {
+		return data -> service.updateCartOrdered(data.buyerId());
 	}
 
 }

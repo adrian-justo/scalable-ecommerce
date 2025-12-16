@@ -65,6 +65,8 @@ class User implements UserDetails {
 	@Enumerated(value = EnumType.STRING)
 	private Set<NotificationType> notificationTypes;
 
+	private String accountId;
+
 	@CreationTimestamp
 	private Instant createdAt;
 
