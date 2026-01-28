@@ -72,5 +72,5 @@ admin.path: ${PATH_ADMIN:/admin}
 webhooks.path: /webhooks
 payments.path: ${PATH_PYMT_MS:/payments}
 stripe.key: ${STRIPE_KEY:sk_test_123}
-success.url: https://txto.eu.org/sjNGP2
 stripe.webhook.secret: ${STRIPE_WEBHOOK_SECRET:whsec_123}
+success.url: ${STRIPE_CO_SUCCESS_URL:https://txto.eu.org/sjNGP2}

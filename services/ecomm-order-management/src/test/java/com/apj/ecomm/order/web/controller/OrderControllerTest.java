@@ -93,7 +93,7 @@ class OrderControllerTest {
 	}
 
 	@Test
-	void cartItemDetails_getSpecific_noHeader() throws Exception {
+	void orderDetails_getSpecific_noHeader() throws Exception {
 		mvc.perform(get(uri + "/1"))
 			.andExpect(result -> assertTrue(result.getResolvedException() instanceof MissingRequestHeaderException));
 	}

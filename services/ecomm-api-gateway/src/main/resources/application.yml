@@ -11,6 +11,7 @@ paths:
     - /api/*/webhooks/**
   getOnly:
     - /api/*/products**
+    - /api/*/notifications**
   buyerOnly:
     - /api/*/carts**
     - /api/*/orders**
@@ -83,6 +84,10 @@ spring:
         uri: lb://ECOMM-PAYMENT-PROCESSING
         predicates:
           - Path=/api/*/admin/payments/**, /api/*/payments/**, /docs/payments/**
+      - id: Notification Service
+        uri: lb://ECOMM-NOTIFICATION
+        predicates:
+          - Path=/api/*/admin/notifications/**, /api/*/notifications/**, /docs/notifications/**
 
 springdoc.swagger-ui:
   path: /docs
@@ -101,6 +106,8 @@ springdoc.swagger-ui:
       url: /docs/orders/api/fulfill
     - name: Payment Processing API
       url: /docs/payments/api/pay
+    - name: Notification API
+      url: /docs/notifications/api/notif
 
 server.port: 8080
 

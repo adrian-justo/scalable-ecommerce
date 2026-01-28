@@ -21,12 +21,10 @@ class PaymentsAuditService implements IPaymentsAuditService {
 
 	private final PaymentMapper mapper;
 
-	@Override
 	public Paged<PaymentResponse> findAll(final Pageable pageable) {
 		return new Paged<>(repository.findAll(pageable).map(mapper::toAudit));
 	}
 
-	@Override
 	public PaymentResponse findById(final long id) {
 		return repository.findById(id).map(mapper::toAudit).orElseThrow(ResourceNotFoundException::new);
 	}

@@ -90,14 +90,14 @@ class Order {
 		initializeProducts();
 	}
 
-	public void initializeProducts() {
+	void initializeProducts() {
 		if (products != null) {
 			products.forEach(p -> p.setOrder(this));
 			computeTotals();
 		}
 	}
 
-	public void computeTotals() {
+	void computeTotals() {
 		setTotal(products.stream().map(OrderItem::getTotalPrice).reduce(BigDecimal.ZERO, BigDecimal::add));
 		setTotalProducts(products.size());
 		setTotalQuantity(products.stream().map(OrderItem::getQuantity).reduce(0, Integer::sum));

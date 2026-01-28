@@ -1,0 +1,36 @@
+x-common-config: &common-config
+  restart: unless-stopped
+  networks: 
+    - ecomm-net
+
+services:
+  notification-mongo:
+    image: mongo
+    container_name: notification-mongo
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${NOTIFICATION_MG_USER:-user}
+      MONGO_INITDB_ROOT_PASSWORD: ${NOTIFICATION_MG_PASSWORD:-pass}
+      MONGO_INITDB_DATABASE: ${NOTIFICATION_MG_DB:-notifications_db}
+    ports:
+      - 5437:27017
+    healthcheck:
+      test: echo 'db.runCommand({serverStatus:1}).ok' | mongosh admin -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --quiet | grep 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    <<: *common-config
+      
+  mongo-express:
+    image: mongo-express
+    container_name: ecomm-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${NOTIFICATION_MG_USER:-user}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${NOTIFICATION_MG_PASSWORD:-pass}
+      ME_CONFIG_MONGODB_URL: ${NOTIFICATION_MG_URL:-mongodb://user:pass@host.docker.internal:5437/}
+      ME_CONFIG_BASICAUTH: false
+    ports:
+      - 5430:8081
+    depends_on:
+      notification-mongo:
+        condition: service_healthy
+    <<: *common-config

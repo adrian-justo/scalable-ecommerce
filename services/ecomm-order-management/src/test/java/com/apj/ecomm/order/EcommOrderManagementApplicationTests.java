@@ -41,6 +41,7 @@ import com.apj.ecomm.order.web.messaging.account.PaymentTransferRequest;
 import com.apj.ecomm.order.web.messaging.account.RequestAccountInformationEvent;
 import com.apj.ecomm.order.web.messaging.account.UserResponse;
 import com.apj.ecomm.order.web.messaging.cart.UpdateCartItemsEvent;
+import com.apj.ecomm.order.web.messaging.notification.NotificationRequest;
 import com.apj.ecomm.order.web.messaging.payment.CheckoutSessionRequest;
 import com.apj.ecomm.order.web.messaging.payment.UpdateOrderStatusEvent;
 import com.apj.ecomm.order.web.messaging.product.OrderedProductDetails;
@@ -153,9 +154,9 @@ class EcommOrderManagementApplicationTests {
 		assertTrue(accountEvent.userIds().containsAll(Set.of(order.shopId())));
 
 		// 3. Receive account information and verify
-		final var accountdetails = new AccountInformationDetails(order.buyerId(),
-				Map.of(order.buyerId(), new UserResponse("Buyer Name", null, "Buyer Address", "Buyer Email", null),
-						order.shopId(), new UserResponse(null, "Shop Name", "Shop Address", null, "Shop Mobile No.")));
+		final var accountdetails = new AccountInformationDetails(order.buyerId(), Map.of(order.buyerId(),
+				new UserResponse("Buyer Name", null, "Buyer Address", "Buyer Email", null, Set.of()), order.shopId(),
+				new UserResponse(null, "Shop Name", "Shop Address", null, "Shop Mobile No.", Set.of())));
 		input.send(MessageBuilder.withPayload(accountdetails).build(), "order-return-user-details");
 
 		var getResponse = given().header(AppConstants.HEADER_USER_ID, buyerId)
@@ -257,11 +258,14 @@ class EcommOrderManagementApplicationTests {
 		final var productDetails = new UpdateOrderStatusEvent(buyerId, Status.CONFIRMED, "paymentIntentId");
 		input.send(MessageBuilder.withPayload(productDetails).build(), "order-update-order-status");
 
-		final var data = output.receive(100, "account-request-payment-transfer");
-		final var event = mapper.readValue(data.getPayload(), PaymentTransferRequest.class);
-		System.out.println(event);
-		assertEquals(2, event.transferDetails().size());
-		assertEquals(productDetails.paymentIntentId(), event.paymentIntentId());
+		final var transferData = output.receive(100, "account-request-payment-transfer");
+		final var transferEvent = mapper.readValue(transferData.getPayload(), PaymentTransferRequest.class);
+		assertEquals(2, transferEvent.transferDetails().size());
+		assertEquals(productDetails.paymentIntentId(), transferEvent.paymentIntentId());
+
+		final var notifData = output.receive(100, "notification-send-event-update");
+		final var notifEvent = mapper.readValue(notifData.getPayload(), NotificationRequest.class);
+		assertEquals(productDetails.status(), notifEvent.status());
 	}
 
 }

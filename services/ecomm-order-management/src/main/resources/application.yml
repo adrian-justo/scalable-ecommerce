@@ -40,6 +40,8 @@ spring:
           destination: ${Q_ORD_UPDATE_OS:order-update-order-status}
         updateStatusAndRequestTransfer-out-0:
           destination: ${Q_ACT_REQUEST_PT:account-request-payment-transfer}
+        sendEventUpdate-out-0:
+          destination: ${Q_NOTIF_SEND_EU:notification-send-event-update}
 #  docker.compose:
 #    lifecycle-management: none
 #  cloud.refresh:

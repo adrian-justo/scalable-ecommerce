@@ -6,6 +6,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.apj.ecomm.order.web.messaging.account.RequestAccountInformationEvent;
 import com.apj.ecomm.order.web.messaging.cart.UpdateCartItemsEvent;
+import com.apj.ecomm.order.web.messaging.notification.NotificationRequest;
 import com.apj.ecomm.order.web.messaging.product.ReturnProductStockEvent;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,11 @@ class OrderEventListener {
 	@TransactionalEventListener
 	void returnProductStock(final ReturnProductStockEvent data) {
 		streamBridge.send("returnProductStock-out-0", data);
+	}
+
+	@TransactionalEventListener
+	void sendEventUpdate(final NotificationRequest data) {
+		streamBridge.send("sendEventUpdate-out-0", data);
 	}
 
 }

@@ -2,10 +2,8 @@ package com.apj.ecomm.payment.domain;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingConstants;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
-import org.mapstruct.ValueMapping;
 
 import com.apj.ecomm.payment.web.messaging.order.OrderItemDetailResponse;
 import com.apj.ecomm.payment.web.messaging.order.OrderItemResponse;

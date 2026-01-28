@@ -1,8 +1,8 @@
 package com.apj.ecomm.order.domain;
 
-import static org.junit.Assert.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -33,9 +33,7 @@ import com.apj.ecomm.order.web.exception.OrderStillProcessingException;
 import com.apj.ecomm.order.web.exception.ResourceAccessDeniedException;
 import com.apj.ecomm.order.web.exception.ResourceNotFoundException;
 import com.apj.ecomm.order.web.messaging.account.UserResponse;
-import com.apj.ecomm.order.web.messaging.payment.CheckoutSessionRequest;
 import com.apj.ecomm.order.web.messaging.product.ProductResponse;
-import com.apj.ecomm.order.web.messaging.product.ProductStockUpdate;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,9 +47,6 @@ class OrderServiceTest {
 
 	@Mock
 	private OrderRepository repository;
-
-	@Mock
-	private OrderItemRepository itemRepository;
 
 	@Mock
 	private OrderClient client;
@@ -108,9 +103,9 @@ class OrderServiceTest {
 		final var cart = List.of(new CartItemResponse(1L, "SHP001", 1));
 
 		when(repository.existsByBuyerIdAndStatus(anyString(), anyString())).thenReturn(false);
+		when(client.getAllCartItems(anyString())).thenReturn(cart);
 		when(repository.findAllByBuyerIdAndStatusIn(anyString(), ArgumentMatchers.<List<String>>any()))
 			.thenReturn(List.of());
-		when(client.getAllCartItems(anyString())).thenReturn(cart);
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
 
 		assertEquals(List.of(mapper.toResponse(order)), service.checkOut(buyerId, null));
@@ -125,43 +120,44 @@ class OrderServiceTest {
 	@Test
 	void checkOut_noItems() {
 		when(repository.existsByBuyerIdAndStatus(anyString(), anyString())).thenReturn(false);
-		when(repository.findAllByBuyerIdAndStatusIn(anyString(), ArgumentMatchers.<List<String>>any()))
-			.thenReturn(List.of());
 		when(client.getAllCartItems(anyString())).thenReturn(List.of());
 		assertThrows(ResourceNotFoundException.class, () -> service.checkOut(buyerId, null));
 	}
 
 	@Test
 	void updateInformationAndGetStockUpdate() {
+		final var delInfo = order.getDeliveryInformation();
+		final var shopInfo = order.getShopInformation();
 		final var userInformation = Map.of(buyerId,
-				new UserResponse(order.getDeliveryInformation().getName(), null,
-						order.getDeliveryInformation().getAddress(), order.getDeliveryInformation().getEmail(), null),
-				order.getShopId(), new UserResponse(null, order.getShopInformation().getName(),
-						order.getShopInformation().getAddress(), null, order.getShopInformation().getMobileNo()));
+				new UserResponse(delInfo.getName(), null, delInfo.getAddress(), delInfo.getEmail(), null,
+						delInfo.getNotificationTypes()),
+				order.getShopId(), new UserResponse(null, shopInfo.getName(), shopInfo.getAddress(), null,
+						shopInfo.getMobileNo(), shopInfo.getNotificationTypes()));
 
 		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
 
-		final var products = order.getProducts()
-			.stream()
-			.collect(Collectors.toMap(OrderItem::getProductId, OrderItem::getQuantity));
-		assertEquals(new ProductStockUpdate(buyerId, products),
-				service.updateInformationAndGetStockUpdate(buyerId, userInformation));
+		assertEquals(
+				Optional.of(order.getProducts()
+					.stream()
+					.collect(Collectors.toMap(OrderItem::getProductId, OrderItem::getQuantity))),
+				service.updateInformationAndGetProducts(buyerId, userInformation));
 	}
 
 	@Test
 	void updateInformationAndGetStockUpdate_inactiveSeller() {
-		final var userInformation = Map.of(buyerId, new UserResponse(order.getDeliveryInformation().getName(), null,
-				order.getDeliveryInformation().getAddress(), order.getDeliveryInformation().getEmail(), null));
+		final var delInfo = order.getDeliveryInformation();
+		final var userInformation = Map.of(buyerId, new UserResponse(delInfo.getName(), null, delInfo.getAddress(),
+				delInfo.getEmail(), null, delInfo.getNotificationTypes()));
 
 		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of());
 
-		assertNull(service.updateInformationAndGetStockUpdate(buyerId, userInformation));
+		assertTrue(service.updateInformationAndGetProducts(buyerId, userInformation).isEmpty());
 	}
 
 	@Test
-	void populateOrderItemDetail() {
+	void populateDetailAndRequestCheckout() {
 		final var details = order.getProducts()
 			.stream()
 			.collect(Collectors.toMap(OrderItem::getProductId,
@@ -170,11 +166,10 @@ class OrderServiceTest {
 
 		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
-		when(itemRepository.saveAll(ArgumentMatchers.<List<OrderItem>>any())).thenReturn(order.getProducts());
 
 		order.setStatus(Status.ACTIVE.toString());
-		assertEquals(new CheckoutSessionRequest(List.of(mapper.toResponse(order))),
-				service.populateDetailAndRequestCheckout(buyerId, details));
+		assertEquals(Optional.of(List.of(mapper.toResponse(order))),
+				service.populateDetailAndGetOrders(buyerId, details));
 	}
 
 	@Test
@@ -187,16 +182,15 @@ class OrderServiceTest {
 
 		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of());
-		when(itemRepository.saveAll(ArgumentMatchers.<List<OrderItem>>any())).thenReturn(List.of());
 
-		assertNull(service.populateDetailAndRequestCheckout(buyerId, details));
+		assertTrue(service.populateDetailAndGetOrders(buyerId, details).isEmpty());
 	}
 
 	@Test
 	void updateStatusAndGetDetails() {
 		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
-		assertEquals(Map.of(order.getShopId(), order.getTotal()),
+		assertEquals(Optional.of(Map.of(order.getShopId(), order.getTotal())),
 				service.updateStatusAndGetDetails(buyerId, Status.CONFIRMED));
 	}
 
@@ -204,7 +198,7 @@ class OrderServiceTest {
 	void updateStatusAndGetDetails_inactive() {
 		when(repository.findAllByBuyerIdAndStatus(anyString(), anyString())).thenReturn(List.of(order));
 		when(repository.saveAll(ArgumentMatchers.<List<Order>>any())).thenReturn(List.of(order));
-		assertNull(service.updateStatusAndGetDetails(buyerId, Status.INACTIVE));
+		assertTrue(service.updateStatusAndGetDetails(buyerId, Status.INACTIVE).isEmpty());
 	}
 
 }

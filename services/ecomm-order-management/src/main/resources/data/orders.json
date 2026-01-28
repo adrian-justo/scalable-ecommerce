@@ -5,14 +5,23 @@
       "name": "E-comm Client",
       "address": "Address, City, State, Zip",
       "email": "client123@mail.com",
-      "mobileNo": "+639021234567"
+      "mobileNo": "+639021234567",
+      "notificationTypes": [
+        "EMAIL",
+        "SMS"
+      ],
+      "notifEmail": "client123@mail.com",
+      "notifMobileNo": "+639021234567"
     },
     "shopId": "SHP002",
     "shopInformation": {
       "name": "Best Shop",
       "address": "Block 1 Lot 2 Three St., Antipolo, Rizal, PH 1992",
       "email": "seller001@mail.com",
-      "mobileNo": "+639087654322"
+      "mobileNo": "+639087654322",
+      "notificationTypes": [
+        "SMS"
+      ]
     },
     "products": [
       {
@@ -42,14 +51,23 @@
       "name": "Buyer Name",
       "address": "null",
       "email": "buyer001@mail.com",
-      "mobileNo": "+639087654321"
+      "mobileNo": "+639087654321",
+      "notificationTypes": [
+        "EMAIL"
+      ],
+      "notifEmail": "buyer001@mail.com",
+      "notifMobileNo": "+639087654321"
     },
     "shopId": "SHP001",
     "shopInformation": {
       "name": "Shop Name",
       "address": "Address, City, State, Zip",
       "email": "client123@mail.com",
-      "mobileNo": "+639021234567"
+      "mobileNo": "+639021234567",
+      "notificationTypes": [
+        "EMAIL",
+        "SMS"
+      ]
     },
     "products": [
       {
@@ -70,14 +88,22 @@
       "name": "Buyer Name",
       "address": "null",
       "email": "buyer001@mail.com",
-      "mobileNo": "+639087654321"
+      "mobileNo": "+639087654321",
+      "notificationTypes": [
+        "EMAIL"
+      ],
+      "notifEmail": "buyer001@mail.com",
+      "notifMobileNo": "+639087654321"
     },
     "shopId": "SHP002",
     "shopInformation": {
       "name": "Best Shop",
       "address": "Block 1 Lot 2 Three St., Antipolo, Rizal, PH 1992",
       "email": "seller001@mail.com",
-      "mobileNo": "+639087654322"
+      "mobileNo": "+639087654322",
+      "notificationTypes": [
+        "SMS"
+      ]
     },
     "products": [
       {

@@ -24,8 +24,16 @@ x-jwt: &jwt
   SECRET_KEY: ${SECRET_KEY:-gEn3r8EdK3y} # Generate key in Account Management TokenServiceTest class
 
 x-stripe: &stripe
-  STRIPE_KEY: ${STRIPE_KEY}
-  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+  STRIPE_KEY: ${STRIPE_KEY:-fromStripe}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-fromStripe}
+
+x-notification: &notification
+  NOTIFICATION_MG_URL: ${NOTIFICATION_MG_URL:-mongodb://user:pass@notification-mongo:27017/}
+  NOTIFICATION_MG_DB: notifications_db
+  SENDGRID_KEY: ${SENDGRID_KEY:-fromSendGrid}
+  TWILIO_SID: ${TWILIO_SID:-fromTwilio}
+  TWILIO_KEY: ${TWILIO_KEY:-fromTwilio}
+  NOTIF_SENDER_SMS: ${NOTIF_SENDER_SMS:-fromTwilio}
 
 x-common-config: &common-config
   restart: unless-stopped
@@ -174,5 +182,21 @@ services:
       api-gateway:
         condition: service_healthy
       payment-postgres:
+        condition: service_healthy
+    <<: [*common-config, *health-chk]
+    
+  notification:
+    build: ../services/ecomm-notification
+    container_name: ecomm-notification
+    ports: 
+      - "8088:8088"
+    environment:
+      <<: [*common-env, *config-id, *config-retry, *eureka, *notification]
+      SERVER_PORT: 8088
+      SPRING_CLOUD_CONFIG_NAME: mongo,monitoring
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      notification-mongo:
         condition: service_healthy
     <<: [*common-config, *health-chk]
