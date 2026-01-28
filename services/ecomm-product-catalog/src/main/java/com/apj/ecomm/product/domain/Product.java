@@ -66,11 +66,11 @@ class Product {
 	@Column(columnDefinition = "boolean default false")
 	private boolean active;
 
-	public void order(final Integer quantity) {
+	void order(final Integer quantity) {
 		stock -= stock > quantity ? quantity : stock;
 	}
 
-	public void restock(final Integer quantity) {
+	void restock(final Integer quantity) {
 		stock += quantity;
 	}
 

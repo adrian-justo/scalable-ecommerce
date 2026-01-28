@@ -55,10 +55,9 @@ class UserService implements IUserService {
 		final var user = findBy(username).orElseThrow(ResourceNotFoundException::new);
 		if (!id.equals(user.getId().toString()))
 			return mapper.toResponseNoIdentifier(user);
-		else if (user.isActive())
+		if (user.isActive())
 			return mapper.toResponse(user);
-		else
-			throw new ResourceNotFoundException();
+		throw new ResourceNotFoundException();
 	}
 
 	public UserResponse update(final String username, final UpdateUserRequest request) {
@@ -91,16 +90,21 @@ class UserService implements IUserService {
 			publishShopStatusUpdate(updated, Boolean.FALSE);
 		}
 		else {
-			if (noExistingSellerRole && updated.getRoles().contains(Role.SELLER)
-					&& processor.transferEnabledFor(updated.getAccountId())) {
-				publishShopStatusUpdate(updated, Boolean.TRUE);
-			}
-			if (updated.getShopName() != null && shopNameUpdated) {
-				final var shopId = mapper.toResponseNoIdentifier(updated).id();
-				eventPublisher.publishEvent(new ShopNameUpdatedEvent(shopId, requestShopName));
-			}
+			publishShopUpdates(noExistingSellerRole, updated, shopNameUpdated, requestShopName);
 		}
 		return mapper.toResponse(updated);
+	}
+
+	private void publishShopUpdates(final boolean noExistingSellerRole, final User updated,
+			final boolean shopNameUpdated, final String requestShopName) {
+		if (noExistingSellerRole && updated.getRoles().contains(Role.SELLER)
+				&& processor.transferEnabledFor(updated.getAccountId())) {
+			publishShopStatusUpdate(updated, Boolean.TRUE);
+		}
+		if (updated.getShopName() != null && shopNameUpdated) {
+			final var shopId = mapper.toResponseNoIdentifier(updated).id();
+			eventPublisher.publishEvent(new ShopNameUpdatedEvent(shopId, requestShopName));
+		}
 	}
 
 	private boolean forProductDeactivation(final User existing, final Set<Role> roles) {

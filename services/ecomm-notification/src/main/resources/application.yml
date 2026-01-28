@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: "@project.name@"
+    version: "@project.version@"
+  config:
+    import: 'optional:configserver:'
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+  data.mongodb:
+    uri: ${NOTIFICATION_MG_URL:mongodb://user:pass@host.docker.internal:5437/}
+    database: ${NOTIFICATION_MG_DB:notifications_db}
+  cloud:
+    function.definition: sendEventUpdate
+    stream:
+      bindings:
+        sendEventUpdate-in-0:
+          destination: ${Q_NOTIF_SEND_EU:notification-send-event-update}
+  sendgrid.api-key: ${SENDGRID_KEY:SG.abc-12E.abc_12E}
+#  docker.compose:
+#    lifecycle-management: none
+
+server.port: 8088
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client.service-url:
+    defaultZone: ${EUREKA_SERVER:http://localhost:8082/eureka/}
+
+logging.level:
+  '[org.springframework.data.mongodb.core.MongoTemplate]': debug
+
+management:
+  endpoints.web:
+    exposure.include: '*'
+  endpoint.health:
+    show-details: always
+  metrics.distribution.percentiles-histogram:
+    '[http.server.requests]': true
+  observations.key-values:
+    application: ${spring.application.name}
+  tracing:
+    sampling.probability: 1.0
+  otlp.tracing:
+    endpoint: http://localhost:4317
+    transport: grpc
+
+springdoc:
+  swagger-ui:
+    path: /docs/notifications
+  api-docs:
+    path: /docs/notifications/api
+
+application.description: "@project.description@"
+gateway.url: ${URL_API_GATEWAY:http://localhost:8080}
+api.version: ${API_VERSION1:/api/v1}
+admin.path: ${PATH_ADMIN:/admin}
+notifications.path: ${PATH_NOTIF_MS:/notifications}
+twilio:
+  sid: ${TWILIO_SID:ACabc12E}
+  key: ${TWILIO_KEY:abc12E}
+sender:
+  sms: ${NOTIF_SENDER_SMS:+12345678901}
+  email:
+    address: ${NOTIF_SENDER_EMAIL:no_reply@company.com}
+    name: ${NOTIF_SENDER_NAME:Company}

@@ -17,7 +17,10 @@ create table delivery_information (
     name varchar(255),
     address varchar(255),
     email varchar(255),
-    mobile_no varchar(255)
+    mobile_no varchar(255),
+    notification_types varchar(255) array,
+    notif_email varchar(255),
+    notif_mobile_no varchar(255)
 );
 
 create table shop_information (
@@ -25,7 +28,8 @@ create table shop_information (
     name varchar(255),
     address varchar(255),
     email varchar(255),
-    mobile_no varchar(255)
+    mobile_no varchar(255),
+    notification_types varchar(255) array
 );
 
 create table order_item (

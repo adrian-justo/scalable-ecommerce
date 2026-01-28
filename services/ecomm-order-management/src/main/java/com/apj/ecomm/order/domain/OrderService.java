@@ -2,12 +2,11 @@ package com.apj.ecomm.order.domain;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,12 +21,13 @@ import com.apj.ecomm.order.domain.model.Paged;
 import com.apj.ecomm.order.web.client.OrderClient;
 import com.apj.ecomm.order.web.exception.OrderStillProcessingException;
 import com.apj.ecomm.order.web.exception.ResourceNotFoundException;
+import com.apj.ecomm.order.web.messaging.account.NotificationType;
 import com.apj.ecomm.order.web.messaging.account.RequestAccountInformationEvent;
 import com.apj.ecomm.order.web.messaging.account.UserResponse;
 import com.apj.ecomm.order.web.messaging.cart.UpdateCartItemsEvent;
-import com.apj.ecomm.order.web.messaging.payment.CheckoutSessionRequest;
+import com.apj.ecomm.order.web.messaging.notification.NotificationRequest;
+import com.apj.ecomm.order.web.messaging.notification.Role;
 import com.apj.ecomm.order.web.messaging.product.ProductResponse;
-import com.apj.ecomm.order.web.messaging.product.ProductStockUpdate;
 import com.apj.ecomm.order.web.messaging.product.ReturnProductStockEvent;
 
 import io.micrometer.observation.annotation.Observed;
@@ -40,8 +40,6 @@ import lombok.RequiredArgsConstructor;
 class OrderService extends BaseService implements IOrderService {
 
 	private final OrderRepository repository;
-
-	private final OrderItemRepository itemRepository;
 
 	private final OrderClient client;
 
@@ -64,159 +62,173 @@ class OrderService extends BaseService implements IOrderService {
 		if (repository.existsByBuyerIdAndStatus(buyerId, Status.PROCESSING.toString()))
 			throw new OrderStillProcessingException();
 
-		final var existingOrders = repository
-			.findAllByBuyerIdAndStatusIn(buyerId, List.of(Status.ACTIVE.toString(), Status.INACTIVE.toString()))
-			.stream()
-			.collect(Collectors.groupingBy(Order::getStatus));
-
 		final var items = client.getAllCartItems(buyerId);
 		if (items.isEmpty())
 			throw new ResourceNotFoundException("Cart item");
 
-		final var entities = mapper.toEntities(buyerId, request, items, publishReturnAndGetAll(existingOrders));
+		final var existingOrders = repository.findAllByBuyerIdAndStatusIn(buyerId,
+				List.of(Status.ACTIVE.toString(), Status.INACTIVE.toString()));
+
+		final var itemsForReturn = new ArrayList<OrderItem>();
+		final var existingOrdersMap = mapByShopId(existingOrders, itemsForReturn);
+
+		final var entities = mapper.toEntities(buyerId, request, items, existingOrdersMap);
 		// Save order leaving details blank. It will be populated asynchronously.
-		return publishCheckoutAndGetResponse(repository.saveAll(entities), buyerId);
-	}
-
-	private Map<String, Order> publishReturnAndGetAll(final Map<String, List<Order>> existingOrders) {
-		final var existing = Optional.ofNullable(existingOrders.get(Status.ACTIVE.toString()))
-			.orElse(new ArrayList<>());
-		if (!existing.isEmpty()) {
-			eventPublisher.publishEvent(new ReturnProductStockEvent(toIdQuantityMap(existing)));
+		final var response = saveAndPublish(entities, buyerId);
+		if (!itemsForReturn.isEmpty()) {
+			eventPublisher.publishEvent(new ReturnProductStockEvent(toIdQuantityMap(itemsForReturn)));
 		}
-
-		Optional.ofNullable(existingOrders.get(Status.INACTIVE.toString())).ifPresent(existing::addAll);
-		return existing.stream().collect(Collectors.toMap(Order::getShopId, Function.identity()));
+		return response;
 	}
 
-	private List<OrderResponse> publishCheckoutAndGetResponse(final List<Order> orders, final String buyerId) {
-		final var userIds = orders.stream().map(Order::getShopId).collect(Collectors.toSet());
-		userIds.add(buyerId);
+	private Map<String, Order> mapByShopId(final List<Order> existingOrders, final List<OrderItem> itemsForReturn) {
+		final var existingOrdersMap = new HashMap<String, Order>();
+		existingOrders.forEach(order -> {
+			existingOrdersMap.put(order.getShopId(), order);
+			if (Status.ACTIVE.toString().equals(order.getStatus())) {
+				itemsForReturn.addAll(order.getProducts());
+			}
+		});
+		return existingOrdersMap;
+	}
+
+	private List<OrderResponse> saveAndPublish(final List<Order> entities, final String buyerId) {
+		final var response = new ArrayList<OrderResponse>();
+		final var userIds = new HashSet<String>();
+
+		final var saved = repository.saveAll(entities);
+		saved.forEach(order -> {
+			response.add(mapper.toResponse(order));
+			userIds.add(order.getShopId());
+		});
+
 		eventPublisher.publishEvent(new RequestAccountInformationEvent(buyerId, userIds));
-		return orders.stream().map(mapper::toResponse).toList();
+		return response;
 	}
 
-	public ProductStockUpdate updateInformationAndGetStockUpdate(final String buyerId,
+	public Optional<Map<Long, Integer>> updateInformationAndGetProducts(final String buyerId,
 			final Map<String, UserResponse> userInformation) {
-		final var validOrders = repository.findAllByBuyerIdAndStatus(buyerId, Status.PROCESSING.toString())
-			.stream()
-			.collect(Collectors.partitioningBy(order -> userInformation.containsKey(order.getBuyerId())
-					&& userInformation.containsKey(order.getShopId())));
+		final var itemsForCartUpdate = new ArrayList<OrderItem>();
+		final var itemsForProductUpdate = new ArrayList<OrderItem>();
 
-		final var orders = repository.saveAll(updateOrDeactivate(validOrders, userInformation));
-		return orders.isEmpty() ? null : new ProductStockUpdate(buyerId, toIdQuantityMap(orders));
-	}
+		final var entities = repository.findAllByBuyerIdAndStatus(buyerId, Status.PROCESSING.toString());
+		entities
+			.forEach(order -> updateOrDeactivate(order, userInformation, itemsForProductUpdate, itemsForCartUpdate));
 
-	private List<Order> updateOrDeactivate(final Map<Boolean, List<Order>> validOrders,
-			final Map<String, UserResponse> userInformation) {
-		final var forUpdate = validOrders.get(true);
-		forUpdate.forEach(order -> mapper.updateInfo(order, userInformation));
-
-		final var forDeletion = validOrders.get(false);
-		if (!forDeletion.isEmpty()) {
-			publishUpdateCartItemsEvent(forDeletion.getFirst().getBuyerId(), toIdQuantityMap(forDeletion));
-			forUpdate.addAll(deactivate(forDeletion));
+		repository.saveAll(entities);
+		if (!itemsForCartUpdate.isEmpty()) {
+			publishUpdateCartItemsEvent(buyerId, toIdQuantityMap(itemsForCartUpdate));
 		}
-		return forUpdate;
+		return itemsForProductUpdate.isEmpty() ? Optional.empty() : Optional.of(toIdQuantityMap(itemsForProductUpdate));
 	}
 
-	public CheckoutSessionRequest populateDetailAndRequestCheckout(final String buyerId,
-			final Map<Long, ProductResponse> details) {
-		final var validItems = populateItems(buyerId, details);
-		final var validOrders = validItems.get(false)
-			.entrySet()
-			.stream()
-			.map(entry -> removeInvalid(entry.getKey(), entry.getValue()))
-			.collect(Collectors.partitioningBy(order -> !order.getProducts().isEmpty(), Collectors.toSet()));
-		final var forUpdate = getAllValid(validOrders.get(true), validItems.get(true).keySet());
-		final var forCheckout = forUpdate.stream().map(mapper::toResponse).toList();
-
-		repository.saveAll(addInvalid(forUpdate, validOrders.get(false)));
-		itemRepository.saveAll(validItems.get(true).values().stream().flatMap(List::stream).toList());
-		return forCheckout.isEmpty() ? null : new CheckoutSessionRequest(forCheckout);
+	private void updateOrDeactivate(final Order order, final Map<String, UserResponse> userInformation,
+			final List<OrderItem> itemsForProductUpdate, final List<OrderItem> itemsForCartUpdate) {
+		if (userInformation.containsKey(order.getBuyerId()) && userInformation.containsKey(order.getShopId())) {
+			mapper.updateInfo(order, userInformation);
+			itemsForProductUpdate.addAll(order.getProducts());
+		}
+		else {
+			updateStatus(order, Status.INACTIVE);
+			itemsForCartUpdate.addAll(order.getProducts());
+		}
 	}
 
-	private Map<Boolean, Map<Order, List<OrderItem>>> populateItems(final String buyerId,
+	public Optional<List<OrderResponse>> populateDetailAndGetOrders(final String buyerId,
 			final Map<Long, ProductResponse> details) {
 		final var itemsForCartUpdate = new ArrayList<OrderItem>();
+		final var itemsForRemoval = new ArrayList<OrderItem>();
+		final var entities = repository.findAllByBuyerIdAndStatus(buyerId, Status.PROCESSING.toString());
 
-		final var validItems = repository.findAllByBuyerIdAndStatus(buyerId, Status.PROCESSING.toString())
-			.stream()
+		entities.stream()
 			.map(Order::getProducts)
 			.flatMap(List::stream)
-			.map(item -> populateAndAdjust(details.get(item.getProductId()), item, itemsForCartUpdate))
-			.collect(Collectors.partitioningBy(item -> item.getQuantity() > 0,
-					Collectors.groupingBy(OrderItem::getOrder)));
+			.forEach(item -> populateFrom(details.get(item.getProductId()), item, itemsForCartUpdate, itemsForRemoval));
 
+		final var forRemoval = itemsForRemoval.stream().collect(Collectors.groupingBy(OrderItem::getOrder));
+		final var forCheckout = new ArrayList<OrderResponse>();
+		entities.forEach(order -> updateOrDeactivate(order, forRemoval.get(order), forCheckout));
+
+		repository.saveAll(entities);
 		if (!itemsForCartUpdate.isEmpty()) {
-			publishUpdateCartItemsEvent(buyerId, toIdQuantityMap(itemsForCartUpdate.stream()));
+			publishUpdateCartItemsEvent(buyerId, toIdQuantityMap(itemsForCartUpdate));
 		}
-		return validItems;
+		return forCheckout.isEmpty() ? Optional.empty() : Optional.of(forCheckout);
 	}
 
-	private OrderItem populateAndAdjust(final ProductResponse detail, final OrderItem item,
-			final List<OrderItem> itemsForCartUpdate) {
-		if (detail.stock() < item.getQuantity()) {
-			item.setQuantity(detail.stock());
+	private void populateFrom(final ProductResponse detail, final OrderItem item,
+			final List<OrderItem> itemsForCartUpdate, final List<OrderItem> itemsForRemoval) {
+		final var stock = detail.stock();
+		if (stock < item.getQuantity()) {
+			item.setQuantity(stock);
 			itemsForCartUpdate.add(item);
+			if (stock < 1) {
+				itemsForRemoval.add(item);
+			}
 		}
 		item.setProductDetail(mapper.toEntity(detail));
-		return item;
+	}
+
+	private void updateOrDeactivate(final Order order, final List<OrderItem> items,
+			final List<OrderResponse> forCheckout) {
+		final var products = order.getProducts();
+		if (items != null) {
+			products.removeAll(items);
+		}
+
+		if (!products.isEmpty()) {
+			updateStatus(order, Status.ACTIVE);
+			order.computeTotals();
+			forCheckout.add(mapper.toResponse(order));
+		}
+		else {
+			updateStatus(order, Status.INACTIVE);
+		}
 	}
 
 	private void publishUpdateCartItemsEvent(final String buyerId, final Map<Long, Integer> products) {
 		eventPublisher.publishEvent(new UpdateCartItemsEvent(buyerId, products));
 	}
 
-	private Map<Long, Integer> toIdQuantityMap(final List<Order> orders) {
-		return toIdQuantityMap(orders.stream().map(Order::getProducts).flatMap(List::stream));
+	private Map<Long, Integer> toIdQuantityMap(final List<OrderItem> items) {
+		return items.stream().collect(Collectors.toMap(OrderItem::getProductId, OrderItem::getQuantity));
 	}
 
-	private Map<Long, Integer> toIdQuantityMap(final Stream<OrderItem> stream) {
-		return stream.collect(Collectors.toMap(OrderItem::getProductId, OrderItem::getQuantity));
-	}
-
-	private Order removeInvalid(final Order order, final List<OrderItem> items) {
-		order.getProducts().removeAll(items);
-		return order;
-	}
-
-	private Set<Order> getAllValid(final Set<Order> validOrders, final Set<Order> validItemOrders) {
-		validOrders.addAll(validItemOrders);
-		validOrders.forEach(this::activate);
-		return validOrders;
-	}
-
-	private Set<Order> addInvalid(final Set<Order> validOrders, final Set<Order> invalidOrders) {
-		if (!invalidOrders.isEmpty()) {
-			validOrders.addAll(deactivate(invalidOrders));
-		}
-		return validOrders;
-	}
-
-	private void activate(final Order order) {
-		updateStatus(order, Status.ACTIVE);
-		order.computeTotals();
-	}
-
-	private Collection<Order> deactivate(final Collection<Order> orders) {
-		return updateStatus(orders, Status.INACTIVE);
-	}
-
-	public Map<String, BigDecimal> updateStatusAndGetDetails(final String buyerId, final Status status) {
-		final var updated = repository
-			.saveAll(updateStatus(repository.findAllByBuyerIdAndStatus(buyerId, Status.ACTIVE.toString()), status));
-		return Status.CONFIRMED.equals(status)
-				? updated.stream().collect(Collectors.toMap(Order::getShopId, Order::getTotal)) : null;
-	}
-
-	private Collection<Order> updateStatus(final Collection<Order> orders, final Status status) {
-		orders.forEach(order -> updateStatus(order, status));
-		return orders;
+	public Optional<Map<String, BigDecimal>> updateStatusAndGetDetails(final String buyerId, final Status status) {
+		final var entities = repository.findAllByBuyerIdAndStatus(buyerId, Status.ACTIVE.toString());
+		entities.stream().forEach(order -> updateStatus(order, status));
+		final var updated = repository.saveAll(entities);
+		publishNotificationRequest(updated, status);
+		return status == Status.CONFIRMED
+				? Optional.of(updated.stream().collect(Collectors.toMap(Order::getShopId, Order::getTotal)))
+				: Optional.empty();
 	}
 
 	private void updateStatus(final Order order, final Status status) {
 		order.setStatus(mapper.valueOf(status));
+	}
+
+	private void publishNotificationRequest(final List<Order> orders, final Status status) {
+		orders.stream().flatMap(order -> getNotificationRequests(order, status)).forEach(eventPublisher::publishEvent);
+	}
+
+	private Stream<NotificationRequest> getNotificationRequests(final Order order, final Status status) {
+		final var deliveryInfo = order.getDeliveryInformation();
+		final var shopInfo = order.getShopInformation();
+		return Stream.concat(
+				deliveryInfo.getNotificationTypes()
+					.stream()
+					.map(type -> getNotificationRequest(order, Role.BUYER, deliveryInfo.getRecipientBy(type), type,
+							status)),
+				shopInfo.getNotificationTypes()
+					.stream()
+					.map(type -> getNotificationRequest(order, Role.SELLER, shopInfo.getRecipientBy(type), type,
+							status)));
+	}
+
+	private NotificationRequest getNotificationRequest(final Order order, final Role role, final String recipient,
+			final NotificationType type, final Status status) {
+		return new NotificationRequest(order.getId(), order.getBuyerId(), role, recipient, type, status);
 	}
 
 }

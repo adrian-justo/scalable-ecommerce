@@ -1,6 +1,5 @@
 package com.apj.ecomm.order.web.messaging;
 
-import java.util.Optional;
 import java.util.function.Function;
 
 import org.springframework.context.annotation.Bean;
@@ -24,17 +23,21 @@ public class OrderMessageConsumer {
 
 	@Bean
 	Function<AccountInformationDetails, ProductStockUpdate> updateInformationAndSendStockUpdate() {
-		return data -> service.updateInformationAndGetStockUpdate(data.buyerId(), data.users());
+		return data -> service.updateInformationAndGetProducts(data.buyerId(), data.users())
+			.map(products -> new ProductStockUpdate(data.buyerId(), products))
+			.orElse(null);
 	}
 
 	@Bean
 	Function<OrderedProductDetails, CheckoutSessionRequest> populateDetailAndRequestCheckout() {
-		return data -> service.populateDetailAndRequestCheckout(data.buyerId(), data.details());
+		return data -> service.populateDetailAndGetOrders(data.buyerId(), data.details())
+			.map(CheckoutSessionRequest::new)
+			.orElse(null);
 	}
 
 	@Bean
 	Function<UpdateOrderStatusEvent, PaymentTransferRequest> updateStatusAndRequestTransfer() {
-		return data -> Optional.ofNullable(service.updateStatusAndGetDetails(data.buyerId(), data.status()))
+		return data -> service.updateStatusAndGetDetails(data.buyerId(), data.status())
 			.map(transferDetails -> new PaymentTransferRequest(transferDetails, data.paymentIntentId()))
 			.orElse(null);
 	}

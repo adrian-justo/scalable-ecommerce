@@ -15,6 +15,8 @@ interface PaymentMapper {
 	@Mapping(target = "sessionUrl", ignore = true)
 	PaymentResponse toAudit(Payment entity);
 
+	@Mapping(target = "createdAt", ignore = true)
+	@Mapping(target = "updatedAt", ignore = true)
 	PaymentResponse toResponse(Payment entity);
 
 }

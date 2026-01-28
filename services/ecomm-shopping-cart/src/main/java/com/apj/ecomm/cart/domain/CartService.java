@@ -111,11 +111,11 @@ class CartService implements ICartService {
 	}
 
 	private List<CartItem> removeOutOfStock(final List<CartItem> entities, final Cart cart) {
-		final var items = entities.stream().filter(item -> item.getQuantity() < 1).toList();
-		if (!items.isEmpty()) {
-			deleteAll(items, cart);
+		final var outOfStock = entities.stream().collect(Collectors.partitioningBy(item -> item.getQuantity() < 1));
+		if (!outOfStock.get(true).isEmpty()) {
+			deleteAll(outOfStock.get(true), cart);
 		}
-		return items.isEmpty() ? entities : entities.stream().filter(item -> item.getQuantity() > 0).toList();
+		return outOfStock.get(false);
 	}
 
 	public void deleteItems(final String buyerId, final List<Long> productIds) {

@@ -4,6 +4,7 @@ include:
   - ../services/ecomm-shopping-cart/database.yml
   - ../services/ecomm-order-management/database.yml
   - ../services/ecomm-payment-processing/database.yml
+  - ../services/ecomm-notification/database.yml
 
 networks:
   ecomm-net:

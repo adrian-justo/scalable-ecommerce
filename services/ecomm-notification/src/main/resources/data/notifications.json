@@ -1,0 +1,47 @@
+[
+  {
+    "userId": "buyer001",
+    "message": {
+      "_class": "Email",
+      "recipient": "buyer001@mail.com",
+      "type": "EMAIL",
+      "orderId": 2,
+      "templateId": "d-af01"
+    },
+    "successful": true
+  },
+  {
+    "userId": "client123",
+    "message": {
+      "_class": "Email",
+      "recipient": "client123@mail.com",
+      "type": "EMAIL",
+      "orderId": 2,
+      "templateId": "d-af02"
+    },
+    "successful": true
+  },
+  {
+    "userId": "client123",
+    "message": {
+      "_class": "Sms",
+      "recipient": "+639021234567",
+      "type": "SMS",
+      "orderId": 2,
+      "contentSid": "HXbc02"
+    },
+    "successful": true
+  },
+  {
+    "userId": "seller001",
+    "message": {
+      "_class": "Sms",
+      "recipient": "+639087654322",
+      "type": "SMS",
+      "orderId": 2,
+      "contentSid": "HXbc02"
+    },
+    "successful": false,
+    "error": "Bad Request"
+  }
+]

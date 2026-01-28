@@ -1,5 +1,6 @@
 package com.apj.ecomm.order.domain;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -89,22 +90,28 @@ interface OrderMapper {
 	@Named("updateItems")
 	@AfterMapping
 	default void updateItems(final List<CartItemResponse> products, final Order order) {
-		final var map = products.stream().collect(Collectors.toMap(CartItemResponse::productId, Function.identity()));
-		order.getProducts()
-			.removeAll(order.getProducts().stream().filter(item -> !map.containsKey(item.getProductId())).toList());
-		updateOrAdd(map, order.getProducts());
+		final var itemsForRemoval = new ArrayList<OrderItem>();
+		final var productMap = products.stream()
+			.collect(Collectors.toMap(CartItemResponse::productId, Function.identity()));
+
+		final var items = order.getProducts();
+		items.forEach(item -> updateExisting(productMap, item, itemsForRemoval));
+		items.removeAll(itemsForRemoval);
+		items.addAll(productMap.values().stream().map(this::toEntity).toList());
+
 		order.initializeProducts();
 	}
 
-	private void updateOrAdd(final Map<Long, CartItemResponse> map, final List<OrderItem> items) {
-		items.forEach(existing -> updateEntity(map.get(existing.getProductId()), existing));
-
-		final var itemsMap = items.stream().collect(Collectors.toMap(OrderItem::getProductId, Function.identity()));
-		items.addAll(map.values()
-			.stream()
-			.filter(response -> !itemsMap.containsKey(response.productId()))
-			.map(this::toEntity)
-			.toList());
+	private void updateExisting(final Map<Long, CartItemResponse> productMap, final OrderItem item,
+			final List<OrderItem> itemsForRemoval) {
+		final var id = item.getProductId();
+		if (productMap.containsKey(id)) {
+			updateEntity(productMap.get(id), item);
+			productMap.remove(id);
+		}
+		else {
+			itemsForRemoval.add(item);
+		}
 	}
 
 	@Mapping(target = "totalPrice", expression = "java(BigDecimal.ZERO)")
@@ -126,6 +133,8 @@ interface OrderMapper {
 		return updateEntity(updated, toDeliveryInfo(response));
 	}
 
+	@Mapping(target = "notifEmail", source = "email")
+	@Mapping(target = "notifMobileNo", source = "mobileNo")
 	DeliveryInformation toDeliveryInfo(UserResponse response);
 
 	DeliveryInformation updateEntity(DeliveryInformation updated, @MappingTarget DeliveryInformation existing);
