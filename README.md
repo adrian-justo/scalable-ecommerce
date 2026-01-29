@@ -13,7 +13,9 @@ Requirements for this project can be found on this [link](https://roadmap.sh/pro
 - **Eventual Consistency**: Achieved through a choreography-based saga pattern, ensuring consistency across services while handling distributed transactions.
 - **Distributed Locking**: Leveraging Spring Integration and Redis to provide distributed locks, ensuring safe resource access across services.
 - **Monitoring & Observability**: Integrated with the Grafana stack, offering comprehensive monitoring, logging, and real-time observability across the microservices ecosystem.
-![microservices-architecture-diagram](https://github.com/user-attachments/assets/19f6e5c3-3b5a-438d-997b-0d6a2fe18304)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/19f6e5c3-3b5a-438d-997b-0d6a2fe18304">
+</p>
 
 ## Tech Stack
 - **Framework**: Spring Boot 3.5.3, Spring Cloud 2025.0.0
