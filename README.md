@@ -13,12 +13,12 @@ Requirements for this project can be found on this [link](https://roadmap.sh/pro
 - **Eventual Consistency**: Achieved through a choreography-based saga pattern, ensuring consistency across services while handling distributed transactions.
 - **Distributed Locking**: Leveraging Spring Integration and Redis to provide distributed locks, ensuring safe resource access across services.
 - **Monitoring & Observability**: Integrated with the Grafana stack, offering comprehensive monitoring, logging, and real-time observability across the microservices ecosystem.
-<p align="center"><img width="752" height="790" alt="image" src="https://github.com/user-attachments/assets/9dbd0170-ed34-4103-afdd-114a6c181232" /></p>
+<p align="center">![microservices-architecture-diagram](https://github.com/user-attachments/assets/749a8ebf-98a5-47a4-bd88-62985baf2aa1)</p>
 
 ## Tech Stack
 - **Framework**: Spring Boot 3.5.3, Spring Cloud 2025.0.0
 - **Language**: Java 21
-- **Database**: PostgreSQL, Redis (Caching), Flyway (Migration)
+- **Database**: PostgreSQL, MongoDB, Redis (Caching), Flyway (Migration)
 - **Message Broker**: RabbitMQ
 - **Build Tool**: Maven
 - **Documentation**: SpringDoc OpenAPI (Swagger)
@@ -45,6 +45,7 @@ Requirements for this project can be found on this [link](https://roadmap.sh/pro
   ```docker
   docker network create ecomm-net
   ```
+- A Stripe and a Twilio account must be created.
 
 ## Getting Started
 - Clone the repository.
@@ -52,7 +53,7 @@ Requirements for this project can be found on this [link](https://roadmap.sh/pro
   git clone https://github.com/adrian-justo/scalable-ecommerce.git
   cd scalable-ecommerce
   ```
--  Configure secret key for JWT signing.
+- Configure secret key for JWT signing.
     - Generate secret key
       ```bash
       cd scalable-ecommerce/services/ecomm-account-management
@@ -66,6 +67,16 @@ Requirements for this project can be found on this [link](https://roadmap.sh/pro
       ...
       SECRET_KEY: generatedKey
       ```
+- Configure Stripe and Twilio API keys in `microservice.yml`.
+  ```yaml
+  ...
+  STRIPE_KEY: fromStripe
+  STRIPE_WEBHOOK_SECRET: fromStripe
+  ...
+  SENDGRID_KEY: fromTwilio
+  TWILIO_KEY: fromTwilio
+  ...
+  ```
 - Navigate to `deployment` directory and run command:
   ```bash
   cd scalable-ecommerce/deployment
@@ -100,7 +111,7 @@ To utilize the config server:
         GIT_USERNAME: ${GIT_USERNAME:-optionalIfPublicRepo}
         GIT_PASSWORD: ${GIT_PASSWORD:-optionalIfPublicRepo}
   ```
-  > Make sure you have also provided here the secret key generated earlier.
+  > Make sure you have also provided here the secret key and api keys.
 - Navigate to `use-config` directory and run command:
   ```bash
   cd scalable-ecommerce/deployment/use-config
@@ -112,6 +123,15 @@ Once the application is running, access the Swagger UI documentation at:
 ```http
 http://localhost:8080/docs
 ```
+| Name | Route Path | Description |
+| :--- | :--- | :--- |
+| Authentication | `/auth/**` | Account registration, login |
+| Account Management | `/users/**` | Account details, update, deletion, payment dashboard, onboarding |
+| Product Catalog | `/products/**` | Product listing, details, management |
+| Shopping Cart | `/carts/**` | Add/remove items, view cart, details |
+| Order Management | `/orders/**` | Place orders, view order history, details, fulfillment |
+| Notification | `/notifications/**` | Notification details |
+| Payment Processing | `/payments/**` | Get checkout session link |
 
 ## Github Actions Setup
 - Add `DOCKER_USERNAME` & `DOCKER_PASSWORD` to GitHub secrets to push the image to Docker Hub.
