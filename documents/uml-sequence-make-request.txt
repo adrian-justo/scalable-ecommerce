@@ -1,0 +1,31 @@
+title Making a resource request
+
+User->API Gateway:Login
+activate API Gateway#lightgray
+
+API Gateway->Account Management:<align:center>username\npassword
+activate Account Management#lightgray
+
+Account Management->Account Management:Authenticate
+
+alt success
+Account Management-->API Gateway:JWT
+API Gateway-->User:Access token
+
+else failed
+Account Management-->User:Send error (401 Unauthorized)
+end
+deactivate Account Management
+
+User->API Gateway:<align:center>Resource request\nAccess token
+API Gateway->API Gateway:Authorize
+
+alt success
+API Gateway->Microservice:Resource request
+activate Microservice#lightgray
+Microservice-->User:Response
+deactivate Microservice
+
+else failed
+API Gateway-->User:Send error (403 Forbidden)
+end
