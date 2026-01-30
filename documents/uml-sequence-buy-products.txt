@@ -1,0 +1,83 @@
+title Buying products
+
+[->Buyer:Authorized
+
+loop
+Buyer->Shopping Cart:Add to cart
+activate Shopping Cart#lightgray
+
+Shopping Cart->Product:Product ID
+activate Product#lightgray
+
+Product->Product:fetch if available
+Product-->Shopping Cart:Product detail
+deactivate Product
+
+Shopping Cart-->Buyer:<align:center>Product added\nCart details
+deactivate Shopping Cart
+end
+
+Buyer->Order Management:Checkout
+activate Order Management#lightgray
+
+Order Management->Shopping Cart:Request cart details
+activate Shopping Cart#lightgray
+
+Shopping Cart-->Order Management:Cart details
+deactivate Shopping Cart
+
+Order Management->Order Management:save
+Order Management->>Account Management:<align:center>Request buyer and\nshop information
+activate Account Management#lightgray
+
+Order Management-->Buyer:<align:center>Saved order\nOrder details\nStatus: Processing
+
+Account Management->Account Management:fetch if active
+Account Management->>Order Management:<align:center>Buyer and shop\ninformation
+deactivate Account Management
+
+Order Management->Order Management:update information
+Order Management->>Product:<align:center>Update products ordered\nRequest product details
+activate Product#lightgray
+
+Product->Product:update stock
+Product->>Order Management:Product details
+deactivate Product
+
+Order Management->Order Management:<align:center>update details\nStatus: Active
+Order Management->>Payment Processing:Request Checkout Session
+deactivate Order Management
+activate Payment Processing#lightgray
+
+Payment Processing->Payment Gateway:<align:center>Create Checkout\nSession
+activate Payment Gateway#lightgray
+
+Payment Gateway-->Payment Processing:<align:center>Checkout Session\nLink
+deactivate Payment Gateway
+
+Payment Processing->Payment Processing:save
+deactivate Payment Processing
+
+Buyer->Payment Processing:Request checkout session link
+activate Payment Processing#lightgray
+
+Payment Processing-->Buyer:Checkout session link
+deactivate Payment Processing
+
+Buyer->Payment Gateway:Complete checkout
+activate Payment Gateway#lightgray
+
+Payment Gateway-->Payment Processing:Checkout successful
+deactivate Payment Gateway
+activate Payment Processing#lightgray
+
+Payment Processing->Payment Processing:update
+
+Payment Processing->>Order Management:Update status
+deactivate Payment Processing
+activate Order Management#lightgray
+
+Order Management->Order Management:<align:center>update\nStatus: Confirmed
+deactivate Order Management
+
+bottomparticipants
