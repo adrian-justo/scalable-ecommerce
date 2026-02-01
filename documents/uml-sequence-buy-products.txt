@@ -3,6 +3,15 @@ title Buying products
 [->Buyer:Authorized
 
 loop
+Buyer->Product:Browse product
+activate Product#lightgray
+
+Product->Product:fetch if available
+Product-->Buyer:Product detail
+deactivate Product
+end
+
+loop
 Buyer->Shopping Cart:Add to cart
 activate Shopping Cart#lightgray
 
@@ -13,20 +22,44 @@ Product->Product:fetch if available
 Product-->Shopping Cart:Product detail
 deactivate Product
 
-Shopping Cart-->Buyer:<align:center>Product added\nCart details
+opt prouct is available
+Shopping Cart->Shopping Cart:Product added
+end
+
+Shopping Cart-->Buyer:Cart items
 deactivate Shopping Cart
 end
 
 Buyer->Order Management:Checkout
 activate Order Management#lightgray
 
-Order Management->Shopping Cart:Request cart details
+Order Management->Order Management:fetch existing orders
+
+alt has order with processing status
+Order Management-->Buyer:send error (422 Unprocessable Entity)
+
+else
+Order Management->Shopping Cart:Request cart items
 activate Shopping Cart#lightgray
 
-Shopping Cart-->Order Management:Cart details
+Shopping Cart->Shopping Cart: fetch if available
+Shopping Cart-->Order Management:Cart items
 deactivate Shopping Cart
 
+alt no items in cart
+Order Management-->Buyer:send error (404 Not Found)
+
+else
 Order Management->Order Management:save
+
+opt has order with active status
+Order Management->>Product:Update products to return
+activate Product#lightgray
+
+Product->Product: return stock
+deactivate Product
+end
+
 Order Management->>Account Management:<align:center>Request buyer and\nshop information
 activate Account Management#lightgray
 
@@ -36,7 +69,16 @@ Account Management->Account Management:fetch if active
 Account Management->>Order Management:<align:center>Buyer and shop\ninformation
 deactivate Account Management
 
-Order Management->Order Management:update information
+alt buyer/shop is inactive
+Order Management->Order Management:<align:center>update\nStatus: Inactive
+Order Management->>Shopping Cart:request item removal
+activate Shopping Cart#lightgray
+
+Shopping Cart->Shopping Cart:remove item
+deactivate Shopping Cart
+
+else
+Order Management->Order Management:update order information
 Order Management->>Product:<align:center>Update products ordered\nRequest product details
 activate Product#lightgray
 
@@ -44,6 +86,19 @@ Product->Product:update stock
 Product->>Order Management:Product details
 deactivate Product
 
+opt quantity ordered > stock
+Order Management->Order Management:update quantity
+Order Management->>Shopping Cart:request quantity update
+activate Shopping Cart#lightgray
+
+Shopping Cart->Shopping Cart:update quantity
+deactivate Shopping Cart
+end
+
+alt all products are out of stock
+Order Management->Order Management:<align:center>update\nStatus: Inactive
+
+else
 Order Management->Order Management:<align:center>update details\nStatus: Active
 Order Management->>Payment Processing:Request Checkout Session
 deactivate Order Management
@@ -57,27 +112,36 @@ deactivate Payment Gateway
 
 Payment Processing->Payment Processing:save
 deactivate Payment Processing
+end
+end
+end
+end
 
 Buyer->Payment Processing:Request checkout session link
 activate Payment Processing#lightgray
 
+alt has active session link
 Payment Processing-->Buyer:Checkout session link
+else
+Payment Processing-->Buyer:send error (404 Not Found)
+end
 deactivate Payment Processing
 
 Buyer->Payment Gateway:Complete checkout
 activate Payment Gateway#lightgray
 
-Payment Gateway-->Payment Processing:Checkout successful
-deactivate Payment Gateway
+Payment Gateway->>Payment Processing:<align:center>update\nStatus: Completed
 activate Payment Processing#lightgray
+deactivate Payment Gateway
 
-Payment Processing->Payment Processing:update
-
-Payment Processing->>Order Management:Update status
-deactivate Payment Processing
+alt payment successful
+Payment Processing->>Order Management:<align:center>update\nStatus: Confirmed
 activate Order Management#lightgray
 
-Order Management->Order Management:<align:center>update\nStatus: Confirmed
+else
+Payment Processing->>Order Management:<align:center>update\nStatus: Inactive
+end
 deactivate Order Management
+deactivate Payment Processing
 
 bottomparticipants
