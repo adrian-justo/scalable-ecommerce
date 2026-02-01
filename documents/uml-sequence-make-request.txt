@@ -1,7 +1,18 @@
 title Making a resource request
 
-User->API Gateway:Login
+opt not yet registered
+User->API Gateway:Register
 activate API Gateway#lightgray
+
+API Gateway->Account Management:Account details
+activate Account Management#lightgray
+
+Account Management->Account Management:save
+Account Management-->User:Account details
+deactivate Account Management
+end
+
+User->API Gateway:Login
 
 API Gateway->Account Management:<align:center>username\npassword
 activate Account Management#lightgray
@@ -9,15 +20,14 @@ activate Account Management#lightgray
 Account Management->Account Management:Authenticate
 
 alt success
-Account Management-->API Gateway:JWT
-API Gateway-->User:Access token
+Account Management-->User:JWT
 
-else failed
+else
 Account Management-->User:Send error (401 Unauthorized)
 end
 deactivate Account Management
 
-User->API Gateway:<align:center>Resource request\nAccess token
+User->API Gateway:<align:center>Resource request\nHeader: JWT
 API Gateway->API Gateway:Authorize
 
 alt success
@@ -26,6 +36,8 @@ activate Microservice#lightgray
 Microservice-->User:Response
 deactivate Microservice
 
-else failed
+else
 API Gateway-->User:Send error (403 Forbidden)
 end
+
+bottomparticipants
