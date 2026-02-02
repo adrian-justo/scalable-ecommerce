@@ -1,0 +1,69 @@
+title Selling products, Order fulfillment, and Payment dashboard
+
+[->Seller:Authorized
+
+opt not yet onboarded (Stripe)
+Seller->Account Management:Request onboarding link
+activate Account Management#lightgray
+
+Account Management->Payment Gateway:Create onboarding link
+activate Payment Gateway#lightgray
+
+Payment Gateway-->Account Management:Onboarding link
+deactivate Payment Gateway
+
+Account Management-->Seller:Onboarding link
+deactivate Account Management
+
+Seller->Payment Gateway:Complete onboarding
+activate Payment Gateway#lightgray
+
+Payment Gateway->Payment Gateway:<align:center>enable payment transfer\nfor account
+deactivate Payment Gateway
+end
+
+Seller->Product:List product
+activate Product#lightgray
+
+Product->Product:save
+note right of Product:<align:center>Status: Inactive if seller\nis not yet onboarded
+Product-->Seller:<align:center>Saved product\nProduct details
+deactivate Product
+
+[->Seller:Confirmed order
+Seller->Order Management:Fulfill order (tracking number, courier code)
+activate Order Management#lightgray
+
+Order Management->Order Management:<align:center>update order\nStatus: Completed
+deactivate Order Management
+
+[->>Account Management:Payment transfer request
+activate Account Management#lightgray
+
+Account Management->Account Management:fetch transfer account
+Account Management->Payment Gateway:<align:center>Create payment\ntransfer request
+deactivate Account Management
+activate Payment Gateway#lightgray
+
+Payment Gateway->Payment Gateway:transfer payment
+deactivate Payment Gateway
+
+Seller->Account Management:Request payment dashboard link
+activate Account Management#lightgray
+
+Account Management->Payment Gateway:Create payment dashboard link
+activate Payment Gateway#lightgray
+
+Payment Gateway-->Account Management:Payment dashboard link
+deactivate Payment Gateway
+
+Account Management-->Seller:Payment dashboard link
+deactivate Account Management
+
+Seller->Payment Gateway:Access payment dashboard
+activate Payment Gateway#lightgray
+
+Payment Gateway-->Seller:<align:center>Payment dashboard\nUpdated balance
+deactivate Payment Gateway
+
+bottomparticipants
